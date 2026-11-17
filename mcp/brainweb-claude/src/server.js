@@ -13,10 +13,13 @@ import path from 'node:path';
 import { SCENES } from '../../../content/catalog.js';
 import { regions } from '../../../content/regions.js';
 
-const VERSION = '1.0.0';
+const VERSION = '1.0.1';
 const PORT = +(process.env.BRAINWEB_PORT || 47321);
+// The published site (GitHub Pages) is allowed by default, so visitors don't have to type its address.
+// A page there still has to be paired with a code before it can do anything (see "pairing" below).
+const PUBLIC_SITE = 'https://ortal-libon.github.io';
 const ORIGINS = new Set([
-  'http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:4173', 'http://127.0.0.1:4173',
+  'http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:4173', 'http://127.0.0.1:4173', PUBLIC_SITE,
   ...String(process.env.BRAINWEB_ORIGIN || '').split(/[,\s]+/).map((s) => s.trim().replace(/\/+$/, '')).filter(Boolean),
 ]);
 const log = (...a) => console.error('[brainweb]', ...a);

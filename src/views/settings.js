@@ -11,6 +11,8 @@ import '../ai/connect.css';
 
 const L = (en, he) => (getLang() === 'he' ? he : en);
 const MCPB_URL = './brainweb-claude.mcpb';
+// Addresses the Claude extension accepts without setup (keep in step with ORIGINS in mcp/brainweb-claude/src/server.js).
+const KNOWN_ORIGIN = /^(http:\/\/(localhost|127\.0\.0\.1):(5173|4173)|https:\/\/ortal-libon\.github\.io)$/;
 
 /** Checks the shape of a pasted key and returns a problem description, or null if it looks right. */
 export function keyProblem(raw) {
@@ -143,7 +145,7 @@ function detailHtml(id, st) {
         <li>${esc(L('Claude Desktop opens it: click "Install".', 'Claude Desktop פותח אותו: לחצו "Install" (התקנה).'))}</li>
         <li>${esc(L('Keep BrainWeb open in this browser. This button turns into "Claude connected ✓" by itself.', 'השאירו את BrainWeb פתוח בדפדפן הזה. הכפתור יהפוך ל-"Claude מחובר ✓" מעצמו.'))}</li>
       </ol>
-      <p class="small muted">${esc(L('Using BrainWeb from a website (not localhost)? In Claude Desktop → Settings → Extensions → BrainWeb, enter its address.', 'משתמשים ב-BrainWeb מאתר (לא localhost)? ב-Claude Desktop ← Settings ← Extensions ← BrainWeb, הזינו את הכתובת שלו.'))}</p>
+      ${KNOWN_ORIGIN.test(location.origin) ? '' : `<p class="small muted">${esc(L('Using BrainWeb from another website? In Claude Desktop → Settings → Extensions → BrainWeb, enter its address.', 'משתמשים ב-BrainWeb מאתר אחר? ב-Claude Desktop ← Settings ← Extensions ← BrainWeb, הזינו את הכתובת שלו.'))}</p>`}
       <div class="row">${bridgeWanted() || on ? `<button class="btn ghost sm" id="claudeOff">${esc(L('Disconnect', 'ניתוק'))}</button>` : `<button class="btn sm" id="claudeOn">${esc(L('Connect Claude', 'חיבור Claude'))}</button>`}</div>`;
   }
   if (id === 'chatgpt') {

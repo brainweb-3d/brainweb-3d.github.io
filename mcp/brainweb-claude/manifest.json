@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "brainweb-claude",
   "display_name": "BrainWeb",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Lets Claude see and drive the BrainWeb 3D neuroscience site open in your browser: show brain parts and scenes, read your lectures and create practice tests.",
   "long_description": "BrainWeb is an interactive 3D neuroscience learning site (English and Hebrew). With this extension installed and BrainWeb open in your browser, Claude can see where you are on the site, take you to any place in the 3D drill-down (brain, regions, cells, molecules, research methods), read the lectures you added on the \"AI test from a lecture\" page, and write practice tests that open straight on the site.\n\nThe extension talks only to the BrainWeb page on your own computer, through a local connection (127.0.0.1, port 47321). Keep the BrainWeb tab open while you use it.",
   "author": {
@@ -73,7 +73,7 @@
     "site_origin": {
       "type": "string",
       "title": "BrainWeb web address (optional)",
-      "description": "Only if you use BrainWeb from a website instead of npm run dev: its address, e.g. https://my-brainweb.netlify.app. Local addresses (localhost:5173) always work.",
+      "description": "Only if you use BrainWeb from a website other than ortal-libon.github.io/brainweb: its address, e.g. https://my-brainweb.netlify.app. Local addresses (localhost:5173) and the published site always work.",
       "default": "",
       "required": false
     }
