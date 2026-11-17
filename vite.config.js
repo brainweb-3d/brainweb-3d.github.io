@@ -2,10 +2,11 @@
 // The AI bridge plugin adds "Sign in with ChatGPT" to the dev server only (npm run dev); see tools/vite-ai-bridge.mjs.
 import { defineConfig } from 'vite';
 import aiBridge from './tools/vite-ai-bridge.mjs';
+import meshoptWorkerFix from './tools/vite-meshopt-worker-fix.mjs'; // keeps the 3D-model decoder working after minify
 
 export default defineConfig({
   base: './',
-  plugins: [aiBridge()],
+  plugins: [aiBridge(), meshoptWorkerFix()],
   build: { chunkSizeWarningLimit: 1500 },
   server: { watch: { ignored: ['**/.local/**', '**/mcp/**'] } },
 });
