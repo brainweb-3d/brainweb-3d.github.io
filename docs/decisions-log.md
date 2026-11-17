@@ -507,3 +507,9 @@ All 5 items were done at about 01:55. The orbit pass had found three drawn scene
   - **Bug fixed on the way:** the developing neuron grew about twice too big, out of the frame, because its group scale was overwritten instead of multiplied. The dish also makes the view's frame include where the new cells grow.
 - **Knockout animals:** the blob mice became mice: a pear-shaped body, a tapering snout with a pink nose, eyes, thin round ears, whiskers, four feet and a tapering tail.
 - **Checked:** build, check-graph, check-stories; every button of the 4 places pressed headless with no errors. Before/after sheets are in `docs/screenshots/orbit/`.
+
+## 2026-11-17: published on GitHub
+- ☰ menu fix: in windows 560px tall or less the top bar was `position: static`, which ignores z-index, so the menu opened behind the 3D view. Changed to `relative` (src/styles.css).
+- Owner chose: public repo `ortal-libon/brainweb` + GitHub Pages (https://ortal-libon.github.io/brainweb/), code + docs only. Kept off GitHub via .gitignore: the book PDFs, assets-incoming/, backups/, prototype/, HANDOVER.md, docs/screenshots/, .claude/, *.mcpb. Commits use GitHub's noreply email (repo-local git config).
+- Deploy: .github/workflows/pages.yml builds with `npm ci && npm run build` on every push to main.
+- Built-site bug found while testing the live link: the minifier renamed the names three's meshopt decoder uses inside its Web Worker, so no compressed model loaded in the built site ("workerProcess is not defined"). Fixed with tools/vite-meshopt-worker-fix.mjs. Checked locally (vite preview) and live.
