@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BrainWeb · Explore the Brain</title>
+    <meta name="description" content="Interactive 3D neuroscience: explore brain structures, learn biological psychology, and test yourself." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Caveat:wght@600;700&family=Amatic+SC:wght@700&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="logo" href="#/explore">🧠 <span>BrainWeb</span></a>
+      <nav class="nav" id="nav"></nav>
+      <div class="top-actions">
+        <button id="searchBtn" class="pill icon" aria-label="Search / חיפוש" title="Search / חיפוש">🔍</button>
+        <button id="menuBtn" class="pill icon" aria-label="Menu / תפריט" aria-expanded="false" aria-controls="topMenu">☰</button>
+      </div>
+      <!-- one menu for everything else (the page links join it on phones) -->
+      <div id="topMenu" class="top-menu card" hidden>
+        <div id="menuNav" class="menu-nav"></div>
+        <button id="langBtn" class="menu-item">עברית</button>
+        <button id="themeBtn" class="menu-item"></button>
+        <button id="helpBtn" class="menu-item"></button>
+        <button id="settingsBtn" class="menu-item"></button>
+      </div>
+    </header>
+
+    <!-- Explore: the continuous 3D drill-down (src/explore/) -->
+    <section id="explore" class="explore" hidden></section>
+
+    <main id="app" class="app"></main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

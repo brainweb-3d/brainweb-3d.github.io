@@ -1,0 +1,81 @@
+{
+  "manifest_version": "0.3",
+  "name": "brainweb-claude",
+  "display_name": "BrainWeb",
+  "version": "1.0.0",
+  "description": "Lets Claude see and drive the BrainWeb 3D neuroscience site open in your browser: show brain parts and scenes, read your lectures and create practice tests.",
+  "long_description": "BrainWeb is an interactive 3D neuroscience learning site (English and Hebrew). With this extension installed and BrainWeb open in your browser, Claude can see where you are on the site, take you to any place in the 3D drill-down (brain, regions, cells, molecules, research methods), read the lectures you added on the \"AI test from a lecture\" page, and write practice tests that open straight on the site.\n\nThe extension talks only to the BrainWeb page on your own computer, through a local connection (127.0.0.1, port 47321). Keep the BrainWeb tab open while you use it.",
+  "author": {
+    "name": "BrainWeb"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.cjs",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server/index.cjs"
+      ],
+      "env": {
+        "BRAINWEB_ORIGIN": "${user_config.site_origin}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "brainweb_get_context",
+      "description": "See what is open in BrainWeb (page, place, selected part, language)."
+    },
+    {
+      "name": "brainweb_pair",
+      "description": "Pair the open BrainWeb page with Claude using the code it shows (once per browser)."
+    },
+    {
+      "name": "brainweb_list_places",
+      "description": "List every place and brain part BrainWeb can show."
+    },
+    {
+      "name": "brainweb_show",
+      "description": "Navigate BrainWeb to a place, brain parts, a pathway or a route."
+    },
+    {
+      "name": "brainweb_list_lectures",
+      "description": "List the lectures added on the AI-test page."
+    },
+    {
+      "name": "brainweb_get_lecture_text",
+      "description": "Read the text of an added lecture."
+    },
+    {
+      "name": "brainweb_create_test",
+      "description": "Create a bilingual practice test that opens on the site."
+    }
+  ],
+  "keywords": [
+    "neuroscience",
+    "education",
+    "3d",
+    "brain",
+    "hebrew"
+  ],
+  "license": "UNLICENSED",
+  "compatibility": {
+    "platforms": [
+      "win32",
+      "darwin",
+      "linux"
+    ],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  },
+  "user_config": {
+    "site_origin": {
+      "type": "string",
+      "title": "BrainWeb web address (optional)",
+      "description": "Only if you use BrainWeb from a website instead of npm run dev: its address, e.g. https://my-brainweb.netlify.app. Local addresses (localhost:5173) always work.",
+      "default": "",
+      "required": false
+    }
+  }
+}

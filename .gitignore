@@ -1,0 +1,17 @@
+node_modules
+dist
+*.pdf
+# Local sign-in tokens (ChatGPT) — never commit
+.local/
+.env.local
+# Generated MCP server bundle (rebuilt by npm run build:mcpb)
+mcp/brainweb-claude/server/
+
+# Kept on this PC only (not published on GitHub)
+assets-incoming/
+backups/
+prototype/
+HANDOVER.md
+docs/screenshots/
+.claude/
+*.mcpb
