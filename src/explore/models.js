@@ -326,6 +326,8 @@ export function setMode(view, mode) {
   const st = view.stage;
   const real = mode === 'real' && !!view.model;
   view.realMode = real;
+  st.realShown = real;
+  st.htmlEls?.forEach((el) => { el.style.visibility = real ? 'hidden' : ''; }); // a scene's HTML over the canvas (e.g. the cortex ruler) belongs to the drawn view
   st.root.visible = !real;
   // `overlay`: scene parts that stay on show over the model (sense-organ markers the model lacks), dots on them
   const overlay = new Set(MODELS[view.key]?.overlay || []);

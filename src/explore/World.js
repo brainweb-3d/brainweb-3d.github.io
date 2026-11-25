@@ -134,6 +134,7 @@ class StageView extends View {
     this.modeWanted = undefined;
     this.engine.root.visible = true;
     this.engine.pickHidden = false;
+    this.engine.realShown = false;
   }
   build(key, def) {
     const s = this.engine;

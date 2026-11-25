@@ -22,6 +22,13 @@ export function createBrainTools(scene, ctx) {
   const st = { seeThrough: false, split: false, rotate: false, color: 'natural', clip: 'none', clipPos: 0, skull: false, arteries: false, ventricles: false,
     pathway: null, stage: 0, ask: null, note: null };
 
+  // 'Show in 3D' from the attention test: jump to one step of a pathway (now, or once it has started playing)
+  let pendingStep = null;
+  window.addEventListener('brainweb:pathStep', (e) => {
+    const { id, step } = e.detail || {};
+    if (st.pathway === id && scene.pathways.pathway) { scene.pathways.showStage(step); scene.pathways.playing = true; } else pendingStep = { id, step };
+  });
+
   function playPathway(id) {
     const p = pathwayById[id];
     if (!p) return;
@@ -34,6 +41,8 @@ export function createBrainTools(scene, ctx) {
       onEnd: () => ctx.rerender(),
       onWait: () => ctx.rerender(),
     });
+    if (pendingStep?.id === id) { scene.pathways.showStage(pendingStep.step); scene.pathways.playing = true; }
+    pendingStep = null;
   }
   function stopPathway() {
     if (!st.pathway) return;
@@ -106,6 +115,7 @@ export function createBrainTools(scene, ctx) {
         <button class="btn ghost sm" data-bt="prev" ${st.stage === 0 ? 'disabled' : ''} aria-label="${esc(ui('prev'))}">${getLang() === 'he' ? '›' : '‹'}</button>
         ${main}
       </div>
+      ${p.tryIt ? `<button class="btn secondary sm xs-try" data-bt="tryIt">🎯 ${esc(L('Try it: test your own attention (2 min)', 'נסו בעצמכם: בדקו את הקשב שלכם (2 דק׳)'))}</button>` : ''}
       <details class="xs-more"><summary>${esc(L('More', 'עוד'))}</summary>
         <p class="small muted">${tt(p.desc)}</p>
         <div class="row"><button class="toggle sm" data-bt="playAll">▶ ${esc(L('Play all steps without stopping', 'הפעלת כל השלבים ברצף'))}</button>
@@ -205,6 +215,7 @@ export function createBrainTools(scene, ctx) {
       play: () => { scene.pathways.stepMode = true; scene.pathways.replay(); },
       playAll: () => { const pw = scene.pathways; pw.stepMode = false; if (st.stage === pathwayById[st.pathway].stages.length - 1) pw.replay(); else pw.playing = true; },
       closeAsk: () => { st.ask = null; },
+      tryIt: () => { import('../views/attentionTask.js').then((m) => m.openAttentionTask()); },
     };
     on('button[data-bt]', 'click', (e) => { const k = e.currentTarget.dataset.bt; handlers[k]?.(); ctx.rerender(); });
     on('select[data-bt="speed"]', 'change', (e) => { scene.pathways.speed = +e.target.value; });

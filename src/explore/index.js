@@ -19,6 +19,10 @@ import { levelById } from '../visual/levels/index.js';
 import { storyBoxHtml, bindStoryBox, storyStepHere, onStoryChange, getStory, storyNote } from '../visual/stories.js';
 import { takeJustSet, getEffect, effectAt, effectBoxHtml, bindEffectBox, openEffectPicker, bestTarget, onEffectChange } from '../visual/effects.js';
 import { openWatch } from './watch.js';
+import { chemNow, chemCardHtml, bindChemCard } from './chemCard.js';
+import { DIVE_CHEM } from '../../content/chemistry.js';
+import { REAL_NOTES } from '../../content/modelNotes.js';
+import { pathwayById } from '../brain/pathways.js';
 import { load, save } from '../store.js';
 import { t, getLang } from '../i18n.js';
 import { esc, tt } from '../util.js';
@@ -52,6 +56,7 @@ function setup() {
     <div class="xw-layers" id="xwLayers"></div>
     <div class="xw-hots" id="xwHots"></div>
     <nav class="xw-crumbs" id="xwCrumbs"></nav>
+    <div class="xw-chem" id="xwChem" hidden></div>
     <div class="xw-label" id="xwLabel" hidden></div>
     <div class="xw-status" id="xwStatus" hidden></div>
     <p class="xw-hint" id="xwHint" hidden></p>
@@ -62,9 +67,9 @@ function setup() {
       <button class="xw-chip" id="xwToolsBtn" aria-expanded="false" aria-controls="xwTools" hidden></button>
     </div>
     <aside class="xw-sheet" id="xwSheet" aria-hidden="true"></aside>`;
-  for (const id of ['Layers', 'Hots', 'Crumbs', 'Label', 'Status', 'Hint', 'Tools', 'Bar', 'Watch', 'Info', 'ToolsBtn', 'Sheet']) els[id[0].toLowerCase() + id.slice(1)] = root.querySelector('#xw' + id);
+  for (const id of ['Layers', 'Hots', 'Crumbs', 'Chem', 'Label', 'Status', 'Hint', 'Tools', 'Bar', 'Watch', 'Info', 'ToolsBtn', 'Sheet']) els[id[0].toLowerCase() + id.slice(1)] = root.querySelector('#xw' + id);
   world = new World(els.layers, { say, readout, hover, select, model: () => updateStatus(), afterFrame, decorate: (v) => attachModel(v).then(() => { if (v === world.current) renderSheet(); }), tickModel });
-  hots = new Hotspots(els.hots, { onDive: (hs, btn) => diveVia(hs, btn), onIntent: (hs) => { if (!world.busy) world.prebuild(hs.to, PLACES[place]?.parent); }, onZoom: zoomTo });
+  hots = new Hotspots(els.hots, { onDive: (hs, btn) => diveVia(hs, btn), onIntent: (hs) => { if (hs.to && !world.busy) world.prebuild(hs.to, PLACES[place]?.parent); }, onZoom: zoomTo });
 
   els.info.addEventListener('click', () => (sheetOpen ? closeSheet() : openSheet()));
   els.watch.addEventListener('click', () => openWatch({ onEffect: pickEffect }));
@@ -77,7 +82,7 @@ function setup() {
     if (root.hidden) return;
     const v = world.current;
     // removing the effect resets the scene (switches the effect had turned on go back to normal)
-    if (!e && v?.kind === 'stage' && v.def) { v.build(place, v.def); world.show(v); world.hooks.decorate(v); hots.set(v, hotsFor(place)); }
+    if (!e && v?.kind === 'stage' && v.def) { v.build(place, v.def); world.show(v); world.hooks.decorate(v); hots.set(v, shownDots(place)); }
     renderSheet();
   });
   onAiChange(() => { if (!root.hidden && place === ROOT) renderSheet(); });
@@ -145,6 +150,9 @@ function diveVia(hs, btn) {
   btn?.classList.add('wait');
   dismissHint();
   pendingHot = { from: place, hs };
+  // a dot about one transmitter: show it alone there, and say on the 🧪 card what it does in the place we come from
+  const role = hs.alone && DIVE_CHEM[`${place}>${hs.id}`];
+  if (role) { pendingAlone = hs.alone; chemContext = { place: hs.to, title: PLACES[place]?.name, icon: PLACES[place]?.icon, item: role }; }
   location.hash = routeOf(hs.to);
 }
 
@@ -262,7 +270,7 @@ function arrive(req, { same = false } = {}) {
   place = req.key;
   if (changed && !same) { selected = null; onlyDuringAnimation = false; }
   renderCrumbs();
-  if (!same) hots.set(v, hotsFor(place));
+  if (!same) hots.set(v, shownDots(place));
   if (place === ROOT) {
     brainTools ||= createBrainTools(v.scene, { rerender: () => { renderSheet(); renderTools(); }, fullscreenEl: root });
     brainTools.applyRoute(req);
@@ -437,6 +445,7 @@ function renderCrumbs() {
     return `${i ? '<span class="sep" aria-hidden="true">›</span>' : ''}<button data-k="${it.k}" class="${here ? 'here' : ''}" ${here ? 'aria-current="location"' : ''} ${it.more ? `aria-label="${esc(t(p?.name))}"` : ''}>${label}</button>`;
   }).join('');
   els.crumbs.querySelectorAll('button:not(.here)').forEach((b) => b.addEventListener('click', () => navigateTo(b.dataset.k)));
+  renderChem();
 }
 function renderInfoChip() {
   els.info.innerHTML = `<span class="i" aria-hidden="true">ⓘ</span> ${esc(L('About this', 'מידע'))}`;
@@ -446,6 +455,37 @@ function renderInfoChip() {
   els.toolsBtn.hidden = place !== ROOT;
   els.toolsBtn.innerHTML = `<span class="i" aria-hidden="true">🛠</span> ${esc(L('Tools', 'כלים'))}`;
   root.classList.toggle('sheet-open', sheetOpen);
+  renderChem();
+}
+
+// ------------------------------------------------------------------ 🧪 neurotransmitters involved (pathway or effect)
+let chemHtml = null;
+let pendingAlone = null; // 'See the molecule' / a dot with `alone`: the transmitter to show on its own in molecule/transmitters
+// One transmitter's role in the place you came from, shown while you stay where it led: { place, title, icon, item }
+let chemContext = null;
+function renderChem(force = false) {
+  if (!els.chem || !place) return;
+  if (chemContext && place === chemContext.place) chemContext.seen = true;
+  else if (chemContext?.seen) chemContext = null; // left that place: back to the pathway or effect
+  const context = chemContext && place === chemContext.place ? chemContext : null;
+  const atBrain = place === ROOT;
+  const pid = atBrain ? brainTools?.st.pathway : null;
+  const html = chemCardHtml(chemNow({ atBrain, pathway: pid ? pathwayById[pid] : null, stage: brainTools?.st.stage || 0, effect: getEffect(), context }));
+  // just below the breadcrumb (which can wrap to two lines)
+  els.chem.style.top = `${els.crumbs.offsetTop + els.crumbs.offsetHeight + 8}px`;
+  if (html === chemHtml && !force) return;
+  chemHtml = html;
+  els.chem.hidden = !html;
+  els.chem.innerHTML = html;
+  if (html) bindChemCard(els.chem, { rerender: () => renderChem(true), onMolecule: showMolecule });
+}
+function showMolecule(id, context = null) {
+  const key = 'molecule/transmitters';
+  if (context) chemContext = { ...context, place: key };
+  if (place === key && world.current?.kind === 'stage') { world.current.stage.isolate(id); selected = id; openSheet(); return; }
+  pendingAlone = id;
+  openAfterArrive = true;
+  location.hash = routeOf(key);
 }
 
 // ------------------------------------------------------------------ first-visit hint (instead of a tour)
@@ -491,12 +531,18 @@ function pickEffect() {
     const href = bestTarget(e, level);
     openAfterArrive = true;
     if (href && href !== location.hash) location.hash = href;
-    else { if (v.kind === 'stage') { v.build(place, v.def); world.show(v); world.hooks.decorate(v); hots.set(v, hotsFor(place)); applyEffect(v); } openSheet(); }
+    else { if (v.kind === 'stage') { v.build(place, v.def); world.show(v); world.hooks.decorate(v); hots.set(v, shownDots(place)); applyEffect(v); } openSheet(); }
   });
 }
 
 /** In-scene dots of a place: only those that lead into the very part they sit on (see DOTS in ./graph.js). */
 const hotsFor = (key) => dotsOf(key);
+/** The dots drawn in the scene: the ways in, plus a label-only mark on the real model (e.g. "one synapse is here").
+ *  A mark has no part of its own in the drawn view, so it only shows while the real model is on screen. */
+const shownDots = (key) => {
+  const m = REAL_NOTES[key]?.mark;
+  return m ? [...hotsFor(key), { id: 'mark', part: '__mark', kind: 'mark', at: m.at, label: m.label }] : hotsFor(key);
+};
 
 // ------------------------------------------------------------------ the ⓘ card
 // Same layout on every level: name → short text → the main action ("Go inside") → animations → "More".
@@ -565,6 +611,7 @@ function renderSheet() {
     ${storyBoxHtml()}
     ${level !== 'methods' ? effectBoxHtml(level, brain ? 'brain' : sceneId) : ''}
     ${brain ? brainTools.playerHtml() + brainTools.askHtml() : ''}
+    ${v.realMode && REAL_NOTES[place] ? `<section class="xs-real"><h4>🔬 ${esc(L('What you\'re seeing', 'מה רואים כאן'))}</h4><p>${tt(REAL_NOTES[place].note)}</p><button class="btn ghost sm" data-mode="interactive">🧩 ${esc(L('Show the drawn view', 'להציג את התצוגה המצוירת'))}</button></section>` : ''}
     ${partHtml || `${intro ? `<p class="xs-intro">${tt(intro)}</p>` : ''}${goHtml}`}
     ${animHtml}
     ${pickHtml}
@@ -706,6 +753,15 @@ function pickChoice(v, id) {
 let effectRun = 0;
 async function applyEffect(v) {
   const run = ++effectRun;
+  if (pendingAlone && place === 'molecule/transmitters') {
+    // 'See the molecule' from the 🧪 card wins over a story step or effect here
+    const id = pendingAlone;
+    pendingAlone = null;
+    try { await v.ready; } catch { /* the card's sentence still explains it */ }
+    if (run !== effectRun || world.current !== v) return;
+    v.stage.isolate(id); selected = id; renderSheet();
+    return;
+  }
   const [level, sceneId] = place.split('/');
   const step = storyStepHere();
   const entry = step || effectAt(level);

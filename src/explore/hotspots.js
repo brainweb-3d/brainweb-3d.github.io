@@ -21,7 +21,7 @@ const v3 = new THREE.Vector3();
 export function anchorFor(view, hs) {
   // a sourced model whose shape differs from the scene: `dotAt` pins the dot to a spot on the model itself, given as
   // a fraction [x, y] of the model's on-screen box in the home view ('hide': no dot while the model shows)
-  const at = view.realMode && view.model?.spec.dotAt?.[hs.part];
+  const at = view.realMode && (hs.at || view.model?.spec.dotAt?.[hs.part]); // hs.at: a label-only mark on the model
   if (at === 'hide') return null;
   if (at) { const a = anchorOnModel(view, at); if (a) return a; }
   let part = view.partMeshes(hs.part, hs.side || 0);
@@ -126,9 +126,9 @@ export class Hotspots {
   render() {
     this.items.forEach((it) => { it.shown = false; it.tf = null; it.dy = 0; it.seen = false; it.merged = false; it.members = null; it.mkey = ''; it.html = null; });
     this.el.innerHTML = this.items.map(({ hs, i }) => `
-      <button tabindex="-1" aria-hidden="true" class="xw-hot hidden ${hs.kind === 'method' ? 'method' : ''} ${hs.kind === 'out' ? 'out' : ''}" data-h="${i}" aria-label="${esc(T(hs.label))}">
+      <button tabindex="-1" aria-hidden="true" class="xw-hot hidden ${hs.kind === 'method' ? 'method' : ''} ${hs.kind === 'out' ? 'out' : ''} ${hs.kind === 'mark' ? 'mark' : ''}" data-h="${i}" aria-label="${esc(T(hs.label))}">
         <span class="dot" aria-hidden="true"></span><span class="lead" aria-hidden="true"></span>
-        <span class="lab">${hs.group ? `<em>${esc(T(hs.group))}</em>` : ''}${esc(T(hs.label))}<small>${esc((KIND[hs.kind] || KIND.in)())}</small></span>
+        <span class="lab">${hs.group ? `<em>${esc(T(hs.group))}</em>` : ''}${esc(T(hs.label))}${hs.kind === 'mark' ? '' : `<small>${esc((KIND[hs.kind] || KIND.in)())}</small>`}</span>
       </button>`).join('');
     this.el.querySelectorAll('.xw-hot').forEach((b) => {
       const it = this.items[+b.dataset.h];
@@ -138,6 +138,7 @@ export class Hotspots {
       b.addEventListener('pointerdown', (e) => { touch = e.pointerType === 'touch' || e.pointerType === 'pen'; });
       b.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (it.hs.kind === 'mark') return; // a label on the real model ("one synapse is here"), not a way in
         if (touch && !b.classList.contains('peek')) {
           this.el.querySelectorAll('.xw-hot.peek').forEach((x) => x.classList.remove('peek'));
           b.classList.add('peek');
@@ -192,7 +193,7 @@ export class Hotspots {
         // back-facing: the surface at the anchor turns away from the camera
         if (a.normal.dot(v3.copy(cam.position).sub(a.point)) < 0) hidden = true;
         // the part is hidden (show-alone / compare of another part)
-        if (!view.partMeshes(it.hs.part, it.hs.side || 0).some((m) => view.isShown(m))) hidden = true;
+        if (it.hs.kind !== 'mark' && !view.partMeshes(it.hs.part, it.hs.side || 0).some((m) => view.isShown(m))) hidden = true;
         // the brain's hemispheres are pulled apart (an internal part is picked): the dots' anchors are not there now
         if (view.engine?.split > 0.02) hidden = true;
         // occlusion: re-checked only after the camera moved (a ray against the detailed brain is not free)
@@ -209,7 +210,7 @@ export class Hotspots {
       if (hidden !== !it.shown) { this.setHidden(it.btn, hidden); it.shown = !hidden; it.merged = false; }
       if (!hidden) {
         shown.push(it);
-        if (!it.seen) { it.seen = true; const lab = it.btn.querySelector('.lab'); it.lab = lab; it.lw = lab.offsetWidth; it.lh = lab.offsetHeight; preloadModule(it.hs.to); }
+        if (!it.seen) { it.seen = true; const lab = it.btn.querySelector('.lab'); it.lab = lab; it.lw = lab.offsetWidth; it.lh = lab.offsetHeight; if (it.hs.to) preloadModule(it.hs.to); }
       }
     }
     this.layout(this.merge(shown), w, h, rtl);

@@ -216,11 +216,12 @@ export class BrainScene {
         if (this.pathways.pathway) this.pathways.load(this.pathways.pathway);
         return hq ? this.addHQ(outer).catch((e) => console.warn('Detailed brain not available, showing the parts model.', e)) : null;
       })
-      .then(() => { if (!this.disposed && this.realistic) this.handlers.model(true); })
+      .then(() => { if (!this.disposed && this.realistic) this.handlers.model(true); this.modelDone = true; })
       .catch((e) => {
         console.warn('Realistic brain model not available, using the simplified model.', e);
         this.addMarkers();
         this.handlers.model(false);
+        this.modelDone = true;
       });
   }
 
@@ -318,6 +319,27 @@ export class BrainScene {
     const c = b.getCenter(new THREE.Vector3());
     const h = b.getSize(new THREE.Vector3()).multiplyScalar(0.5);
     return c.add(new THREE.Vector3(off[0] * h.x, off[1] * h.y, off[2] * h.z));
+  }
+
+  /** Like regionPoint, but snapped to the nearest point on the part's surface (for spots on the cortex, e.g. the
+   *  frontal eye field: aim with an offset at or past the box edge, and the closest vertex of that part is used). */
+  surfacePoint(id, side = 0, off = [0, 0, 0]) {
+    const target = this.regionPoint(id, side, off);
+    if (!target) return null;
+    let meshes = this.byRegion.get(id) || [];
+    if (side) { const s = meshes.filter((m) => m.userData.side === side); if (s.length) meshes = s; }
+    let best = null, bestD = Infinity;
+    const v = new THREE.Vector3();
+    for (const m of meshes) {
+      m.updateMatrixWorld();
+      const p = m.geometry.attributes.position;
+      for (let i = 0; i < p.count; i += 2) {
+        v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld);
+        const d = v.distanceToSquared(target);
+        if (d < bestD) { bestD = d; best = v.clone(); }
+      }
+    }
+    return best || target;
   }
 
   /** Points outside the brain, used as start/end of sensory and motor pathways. */
@@ -538,10 +560,14 @@ export class BrainScene {
     const all = this.pathways.allRegions();
     this.seeThroughForPathway = true;
     this.refreshMaterials();
-    if (all.length) this.flyTo(all, 2.9);
+    // `view`: a pathway can ask for a side to be seen from (e.g. attention, which is mostly on the right)
+    // (applied in frame() once the model has loaded and the world is not flying the camera)
+    this.wantView = pathway.view || null;
+    if (!pathway.view && all.length) this.flyTo(all, 2.9);
   }
 
   stopPathway() {
+    this.wantView = null;
     this.pathways.clear();
     this.seeThroughForPathway = false;
     this.focus([], { fly: false });
@@ -698,6 +724,11 @@ export class BrainScene {
       }
     }
     this.pathways.update(dt);
+    if (this.wantView && this.modelDone && !this.driven) {
+      const dir = new THREE.Vector3(...this.wantView).normalize().multiplyScalar(3.1);
+      this.wantView = null;
+      this.animateCamera(BRAIN_CENTER.clone(), BRAIN_CENTER.clone().add(dir));
+    }
     if (!this.driven) this.controls.update();
     const moving = this.needsRender || this.driven || this.tween || this.focusIds.size || this.pathways.pathway || Math.abs(this.split - splitWant) > 0.001;
     if (!moving) return;

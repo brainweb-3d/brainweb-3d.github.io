@@ -47,6 +47,7 @@ export class Stage {
     this.roots = new Map();     // partId → objects passed to add()
     this.movers = new Set();    // wrapper groups used to move parts for compare
     this.hidden = [];           // objects hidden by isolate/compare
+    this.htmlEls = [];          // HTML a scene put over the canvas (e.g. the cortex's layer ruler): removed by clear()
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setPixelRatio(maxPixelRatio());
@@ -119,7 +120,12 @@ export class Stage {
     this.focusIds.clear();
     this.hoverId = this.selectedId = null;
     this.tween = null;
+    this.htmlEls.forEach((el) => el.remove());
+    this.htmlEls = [];
   }
+
+  /** Put an HTML element over this scene's canvas (removed with the scene). */
+  addHtml(el) { this.container.appendChild(el); this.htmlEls.push(el); return el; }
 
   /** Register part metadata. */
   definePart(def) { this.parts.set(def.id, def); return def; }

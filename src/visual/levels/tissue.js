@@ -39,126 +39,200 @@ function nisslTexture(layers, total) {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
   return t;
 }
+// Made easier to read (owner, 2026-11-22: "too messy… hard to understand the layers"):
+//  · a thin slice (like a textbook section), not a deep cube, so cells do not hide behind each other;
+//  · clearly tinted layer bands with border lines;
+//  · a few typical cells per layer in a tidy row (about 17); "Show the real density" adds the crowd back;
+//  · thalamic axons, the signal and the artery appear only when an animation or toggle needs them;
+//  · a layer ruler: real HTML buttons I–VI beside the slice, with names; hover/tap lights a layer and says what it does.
 function cortexScene(stage, { readout, L }) {
   const R = seeded(7);
   const r = (a, b) => a + R() * (b - a);
+  // id, numeral, thickness, colour, full name EN/HE, role EN/HE (short, for the ruler), description EN/HE
   const LAYERS = [
-    ['l1', 'I', 0.35, '#fde68a', 'Layer I — molecular layer', 'שכבה I — השכבה המולקולרית', 'Very few cell bodies: mostly dendrites from cells below and axons running sideways.', 'מעט מאוד גופי תאים: בעיקר דנדריטים של תאים מלמטה ואקסונים שרצים לרוחב.'],
-    ['l2', 'II', 0.35, '#fcd5b5', 'Layer II — external granular', 'שכבה II — גרגירית חיצונית', 'Small, densely packed neurons that connect with other cortical areas.', 'נוירונים קטנים וצפופים שמתחברים לאזורים אחרים בקליפה.'],
-    ['l3', 'III', 0.7, '#f9c0c0', 'Layer III — external pyramidal', 'שכבה III — פירמידלית חיצונית', 'Medium pyramidal cells whose axons go to other cortical areas (including across the corpus callosum).', 'תאים פירמידליים בינוניים שהאקסונים שלהם הולכים לאזורי קליפה אחרים (כולל דרך הגוף המיוזע).'],
-    ['l4', 'IV', 0.45, '#c7e9c0', 'Layer IV — internal granular', 'שכבה IV — גרגירית פנימית', 'The main INPUT layer: receives sensory information from the thalamus. Thick in sensory areas such as the primary visual cortex.', 'שכבת הקלט העיקרית: מקבלת מידע חושי מהתלמוס. עבה באזורים חושיים כמו קליפת הראייה הראשונית.'],
-    ['l5', 'V', 0.65, '#bfdbfe', 'Layer V — internal pyramidal', 'שכבה V — פירמידלית פנימית', 'The main OUTPUT layer: large pyramidal cells send axons to the brainstem and spinal cord. Thick in the motor cortex.', 'שכבת הפלט העיקרית: תאים פירמידליים גדולים שולחים אקסונים לגזע המוח ולחוט השדרה. עבה בקליפה המוטורית.'],
-    ['l6', 'VI', 0.6, '#ddd6fe', 'Layer VI — multiform', 'שכבה VI — רב-צורנית', 'Varied cells that send feedback back to the thalamus.', 'תאים מגוונים ששולחים משוב חזרה לתלמוס.'],
+    ['l1', 'I', 0.35, '#fde68a', 'Layer I — molecular layer', 'שכבה I — השכבה המולקולרית', 'Molecular', 'מולקולרית', 'Very few cell bodies: mostly dendrites from cells below and axons running sideways.', 'מעט מאוד גופי תאים: בעיקר דנדריטים של תאים מלמטה ואקסונים שרצים לרוחב.'],
+    ['l2', 'II', 0.35, '#fdba74', 'Layer II — external granular', 'שכבה II — גרגירית חיצונית', 'External granular', 'גרגירית חיצונית', 'Small, densely packed neurons that connect with other cortical areas.', 'נוירונים קטנים וצפופים שמתחברים לאזורים אחרים בקליפה.'],
+    ['l3', 'III', 0.7, '#fca5a5', 'Layer III — external pyramidal', 'שכבה III — פירמידלית חיצונית', 'External pyramidal', 'פירמידלית חיצונית', 'Medium pyramidal cells whose axons go to other cortical areas (including across the corpus callosum).', 'תאים פירמידליים בינוניים שהאקסונים שלהם הולכים לאזורי קליפה אחרים (כולל דרך הגוף המיוזע).'],
+    ['l4', 'IV', 0.45, '#86efac', 'Layer IV — internal granular', 'שכבה IV — גרגירית פנימית', 'Input from the thalamus', 'קלט מהתלמוס', 'The main INPUT layer: receives sensory information from the thalamus. Thick in sensory areas such as the primary visual cortex.', 'שכבת הקלט העיקרית: מקבלת מידע חושי מהתלמוס. עבה באזורים חושיים כמו קליפת הראייה הראשונית.'],
+    ['l5', 'V', 0.65, '#93c5fd', 'Layer V — internal pyramidal', 'שכבה V — פירמידלית פנימית', 'Output to the body', 'פלט אל הגוף', 'The main OUTPUT layer: large pyramidal cells send axons to the brainstem and spinal cord. Thick in the motor cortex.', 'שכבת הפלט העיקרית: תאים פירמידליים גדולים שולחים אקסונים לגזע המוח ולחוט השדרה. עבה בקליפה המוטורית.'],
+    ['l6', 'VI', 0.6, '#c4b5fd', 'Layer VI — multiform', 'שכבה VI — רב-צורנית', 'Feedback to the thalamus', 'משוב לתלמוס', 'Varied cells that send feedback back to the thalamus.', 'תאים מגוונים ששולחים משוב חזרה לתלמוס.'],
   ];
+  const W = 3.4, D = 1.3; // a slice: wide and tall, but thin front to back
+  const FRONT = D / 2 - 0.3; // the row the cells stand in
   let y = 1.6;
   const mids = {};
-  const W = 3.4;
-  for (const [id, rom, t, color, en, he, den, dhe] of LAYERS) {
+  const lineMat = new THREE.LineBasicMaterial({ color: '#64748b', transparent: true, opacity: 0.7 });
+  // the outline of one level (a border between two layers) on the front, left and right faces of the slice
+  const border = (yy) => {
+    const pts = [V(-W / 2, yy, -D / 2), V(-W / 2, yy, D / 2), V(W / 2, yy, D / 2), V(W / 2, yy, -D / 2)];
+    const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), lineMat);
+    ln.raycast = () => {};
+    stage.root.add(ln);
+  };
+  border(y);
+  for (const [id, , t, color, en, he, , , den, dhe] of LAYERS) {
     P(stage, id, en, he, den, dhe, color, [2]);
-    const slab = box(W, t, W, color, { opacity: 0.12 });
+    const slab = box(W, t, D, color, { opacity: 0.26 });
     slab.material.depthWrite = false;
     slab.position.y = y - t / 2;
     stage.add(slab, id);
-    const lbl = textSprite(rom, { size: 0.32, color: '#334155' });
-    lbl.position.set(-W / 2 - 0.35, y - t / 2, W / 2);
-    stage.root.add(lbl);
     mids[id] = y - t / 2;
     y -= t;
+    border(y);
   }
   const bottom = y;
   P(stage, 'white', 'White matter', 'חומר לבן', 'Below the cortex: bundles of myelinated axons. Myelin is fatty, so this tissue looks white — the cortex (cell bodies) looks gray.', 'מתחת לקליפה: צרורות של אקסונים עטופי מיאלין. המיאלין שומני, ולכן הרקמה נראית לבנה — הקליפה (גופי תאים) נראית אפורה.', '#e5e7eb', [2]);
-  const wm = box(W, 0.9, W, '#f1f5f9', { opacity: 0.3 });
+  const wm = box(W, 0.9, D, '#f1f5f9', { opacity: 0.35 });
   wm.material.depthWrite = false;
   wm.position.y = bottom - 0.45;
   stage.add(wm, 'white');
-  // the Nissl-stained back and left walls (a picture, not a part: hovering passes through to the cells)
+  // the Nissl-stained back wall (a picture, not a part: hovering passes through to the cells)
   const tex = nisslTexture([...LAYERS.map((l) => [l[0], l[2]]), ['white', 0.9]], 1.6 - bottom + 0.9);
   const H = 1.6 - bottom + 0.9, yMid = 1.6 - H / 2;
-  for (const [pos, rotY] of [[V(0, yMid, -W / 2 - 0.005), 0], [V(-W / 2 - 0.005, yMid, 0), Math.PI / 2]]) {
-    const wall = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85 }));
-    wall.position.copy(pos); wall.rotation.y = rotY; wall.raycast = () => {};
-    stage.root.add(wall);
-  }
-  // the pia on top, with its vessels, and one artery diving straight down through the layers
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85 }));
+  wall.position.set(0, yMid, -D / 2 - 0.005); wall.raycast = () => {};
+  stage.root.add(wall);
+  // the pia on top; its vessels and the artery diving down are shown with "Show blood vessels"
   P(stage, 'vessels', 'Blood vessels', 'כלי דם', 'Arteries run over the surface in the pia and dive straight down into the cortex, branching into capillaries in every layer: the brain uses a fifth of the body\'s oxygen.', 'עורקים עוברים על פני השטח בקרום הרך וצוללים ישר למטה לתוך הקליפה, ומתפצלים לנימים בכל שכבה: המוח צורך חמישית מהחמצן של הגוף.', '#dc2626', [2]);
-  const pia = box(W, 0.03, W, '#f5c2d6', { opacity: 0.5 }); pia.material.depthWrite = false; pia.position.y = 1.62; stage.add(pia, 'vessels');
+  const pia = box(W, 0.03, D, '#f5c2d6', { opacity: 0.5 }); pia.material.depthWrite = false; pia.position.y = 1.62; stage.root.add(pia);
   const vg = [];
-  vg.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(-W / 2, 1.68, -0.9), V(-0.4, 1.7, -0.5), V(0.6, 1.68, 0.1), V(W / 2, 1.7, 0.7)]), 40, 0.06, 8, false));
-  const dive = [V(-0.55, 1.68, -0.48), V(-0.6, 0.6, -0.5), V(-0.5, -0.4, -0.55), V(-0.58, bottom, -0.5)];
+  vg.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(-W / 2, 1.68, -0.3), V(-0.4, 1.7, -0.2), V(0.6, 1.68, 0.05), V(W / 2, 1.7, 0.2)]), 40, 0.06, 8, false));
+  const dive = [V(-0.55, 1.68, -0.25), V(-0.6, 0.6, -0.3), V(-0.5, -0.4, -0.3), V(-0.58, bottom, -0.28)];
   vg.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(dive), 40, 0.04, 6, false));
-  for (let k = 0; k < 9; k++) { const p = new THREE.CatmullRomCurve3(dive).getPointAt(0.08 + k * 0.1), d = V(r(-1, 1), r(-0.4, 0.2), r(-1, 1)).normalize(); vg.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([p, p.clone().addScaledVector(d, 0.25).add(V(0, -0.05, 0)), p.clone().addScaledVector(d, 0.5).add(V(r(-0.1, 0.1), -0.12, r(-0.1, 0.1)))]), 10, 0.014, 4, false)); }
-  stage.add(meshOf(vg, mat('#dc2626', { rough: 0.35 })), 'vessels');
+  for (let k = 0; k < 9; k++) { const p = new THREE.CatmullRomCurve3(dive).getPointAt(0.08 + k * 0.1), d = V(r(-1, 1), r(-0.4, 0.2), r(-0.4, 0.4)).normalize(); vg.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([p, p.clone().addScaledVector(d, 0.25).add(V(0, -0.05, 0)), p.clone().addScaledVector(d, 0.5).add(V(r(-0.1, 0.1), -0.12, r(-0.05, 0.05)))]), 10, 0.014, 4, false)); }
+  const vessels = meshOf(vg, mat('#dc2626', { rough: 0.35 }));
+  vessels.visible = false;
+  stage.add(vessels, 'vessels');
 
   const cells = [];
   // a pyramidal neuron, one mesh for its body and dendrites (and one for its axon), soma at the origin
-  const pyramidal = (layer, x, z, s) => {
+  const pyramidal = (layer, x, z, s, group = null) => {
     const g = new THREE.Group();
     const top = 1.6 - mids[layer] - 0.06, geos = [];
     const soma = new THREE.LatheGeometry([[0, -0.11], [0.1, -0.09], [0.11, -0.03], [0.065, 0.08], [0.028, 0.17], [0, 0.2]].map(([a, b]) => new THREE.Vector2(a * s, b * s)), 10);
     geos.push(soma);
     const ap = [V(0, 0.18 * s, 0)];
-    for (let k = 1; k <= 5; k++) ap.push(V(r(-0.04, 0.04), 0.18 * s + (top - 0.18 * s) * (k / 5), r(-0.04, 0.04)));
+    for (let k = 1; k <= 5; k++) ap.push(V(r(-0.03, 0.03), 0.18 * s + (top - 0.18 * s) * (k / 5), r(-0.02, 0.02)));
     geos.push(taperTube(ap, 0.024 * s, (t) => 1 - 0.6 * t, '#e11d48', undefined, 24, 6).geometry);
     const apC = new THREE.CatmullRomCurve3(ap);
-    for (let k = 0; k < 4; k++) { const p = apC.getPointAt(0.2 + k * 0.15), d = V(r(-1, 1), 0.7, r(-1, 1)).normalize(), L1 = r(0.18, 0.35) * Math.min(1.3, s); geos.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([p, p.clone().addScaledVector(d, L1 * 0.5), p.clone().addScaledVector(d, L1).add(V(0, 0.04, 0))]), 8, 0.008 * s + 0.004, 4, false)); }
+    // side branches mostly sideways in the plane of the slice (they used to fan out front-to-back and tangle)
+    for (let k = 0; k < 3; k++) { const p = apC.getPointAt(0.25 + k * 0.2), d = V((k % 2 ? 1 : -1) * r(0.6, 1), 0.7, r(-0.25, 0.25)).normalize(), L1 = r(0.16, 0.28) * Math.min(1.3, s); geos.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([p, p.clone().addScaledVector(d, L1 * 0.5), p.clone().addScaledVector(d, L1).add(V(0, 0.04, 0))]), 8, 0.008 * s + 0.004, 4, false)); }
     const tip = ap[ap.length - 1];
-    for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2 + r(0, 1); geos.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([tip, tip.clone().add(V(Math.cos(a) * 0.15, 0.02, Math.sin(a) * 0.15)), tip.clone().add(V(Math.cos(a) * 0.32, r(-0.08, 0.04), Math.sin(a) * 0.32))]), 8, 0.007, 4, false)); } // the tuft in layer I
-    for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2 + r(0, 1), d = V(Math.cos(a), r(-0.7, -0.2), Math.sin(a)).normalize(), p0 = V(0, -0.08 * s, 0), p1 = p0.clone().addScaledVector(d, 0.18 * s); geos.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([p0, p1, p1.clone().addScaledVector(d, 0.15 * s).add(V(r(-0.05, 0.05), -0.04, r(-0.05, 0.05)))]), 8, 0.011 * s, 4, false)); const fork = d.clone().add(V(r(-0.6, 0.6), 0, r(-0.6, 0.6))).normalize(); geos.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([p1, p1.clone().addScaledVector(fork, 0.16 * s)]), 4, 0.008 * s, 4, false)); }
+    for (let k = 0; k < 4; k++) { const a = (k / 4) * Math.PI * 2 + 0.4; geos.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([tip, tip.clone().add(V(Math.cos(a) * 0.12, 0.02, Math.sin(a) * 0.06)), tip.clone().add(V(Math.cos(a) * 0.24, r(-0.06, 0.03), Math.sin(a) * 0.1))]), 8, 0.007, 4, false)); } // the tuft in layer I
+    for (let k = 0; k < 4; k++) { const a = (k / 4) * Math.PI * 2 + 0.6, d = V(Math.cos(a), r(-0.7, -0.3), Math.sin(a) * 0.5).normalize(), p0 = V(0, -0.08 * s, 0), p1 = p0.clone().addScaledVector(d, 0.16 * s); geos.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([p0, p1, p1.clone().addScaledVector(d, 0.12 * s).add(V(0, -0.03, 0))]), 8, 0.011 * s, 4, false)); }
     const body = meshOf(geos, mat('#be123c', { rough: 0.45 }));
     g.add(body);
-    const ax = [V(0, -0.11 * s, 0), V(r(-0.03, 0.03), -0.4, 0), V(r(-0.05, 0.05), (bottom - mids[layer]) * 0.6, r(-0.05, 0.05)), V(0, bottom - mids[layer] - 0.8, 0)];
-    const axG = [new THREE.TubeGeometry(new THREE.CatmullRomCurve3(ax), 30, 0.009, 4, false)];
-    const ap1 = new THREE.CatmullRomCurve3(ax).getPointAt(0.15); axG.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([ap1, ap1.clone().add(V(0.18, 0.05, 0.06)), ap1.clone().add(V(0.3, 0.25, 0.1))]), 8, 0.006, 4, false)); // a recurrent collateral
-    g.add(meshOf(axG, mat('#f59e0b', { rough: 0.5 })));
+    const ax = [V(0, -0.11 * s, 0), V(0, -0.4, 0), V(r(-0.03, 0.03), (bottom - mids[layer]) * 0.6, 0), V(0, bottom - mids[layer] - 0.8, 0)];
+    g.add(meshOf([new THREE.TubeGeometry(new THREE.CatmullRomCurve3(ax), 30, 0.009, 4, false)], mat('#f59e0b', { rough: 0.5 })));
     g.position.set(x, mids[layer], z);
-    stage.add(g, layer); cells.push({ g, layer });
+    stage.add(g, layer, group || stage.root); cells.push({ g, layer });
     return body;
   };
   // a granule (stellate) cell: a round body and short branching dendrites all round it
-  const stellate = (layer, x, z) => {
+  const stellate = (layer, x, z, group = null, dy = 0) => {
     const g = new THREE.Group();
-    const geos = [new THREE.SphereGeometry(0.06, 12, 9)];
-    for (let k = 0; k < 7; k++) { const d = V(r(-1, 1), r(-0.8, 0.8), r(-1, 1)).normalize(), p1 = d.clone().multiplyScalar(0.14); geos.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(), d.clone().multiplyScalar(0.06), p1]), 6, 0.008, 4, false)); const f = d.clone().add(V(r(-0.7, 0.7), r(-0.7, 0.7), r(-0.7, 0.7))).normalize(); geos.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([p1, p1.clone().addScaledVector(f, 0.1)]), 4, 0.006, 4, false)); }
+    const geos = [new THREE.SphereGeometry(0.065, 12, 9)];
+    for (let k = 0; k < 6; k++) { const a = (k / 6) * Math.PI * 2, d = V(Math.cos(a), r(-0.5, 0.5), Math.sin(a) * 0.5).normalize(), p1 = d.clone().multiplyScalar(0.14); geos.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(), d.clone().multiplyScalar(0.06), p1]), 6, 0.009, 4, false)); const f = d.clone().add(V(r(-0.5, 0.5), r(-0.5, 0.5), 0)).normalize(); geos.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([p1, p1.clone().addScaledVector(f, 0.09)]), 4, 0.007, 4, false)); }
     g.add(meshOf(geos, mat('#16a34a', { rough: 0.45 })));
-    g.position.set(x, mids[layer] + r(-0.12, 0.12), z);
-    stage.add(g, layer); cells.push({ g, layer });
+    g.position.set(x, mids[layer] + dy, z);
+    stage.add(g, layer, group || stage.root); cells.push({ g, layer });
   };
-  // the two zoom-in dots sit on two particular cells far apart (owner, 2026-11-15: on one layer each they were so close
-  // that they merged into one dot, which only zoomed in on the cortex): a big layer-V cell at the front right
-  // ("a pyramidal neuron") and a layer-III cell at the front left ("the types of neurons")
-  pyramidal('l5', 1.25, 1.3, 1.6).userData.dot = true;
-  pyramidal('l3', -1.3, 1.3, 0.9).userData.dot = true;
-  for (let i = 0; i < 7; i++) pyramidal('l3', r(-1.4, 1.4), r(-1.4, 1.4), 0.8);
-  for (let i = 0; i < 4; i++) pyramidal('l2', r(-1.4, 1.4), r(-1.4, 1.4), 0.55);
-  for (let i = 0; i < 5; i++) pyramidal('l5', r(-1.4, 1.4), r(-1.4, 1.4), 1.4);
-  for (let i = 0; i < 4; i++) pyramidal('l6', r(-1.4, 1.4), r(-1.4, 1.4), 0.7);
-  for (let i = 0; i < 14; i++) stellate('l4', r(-1.5, 1.5), r(-1.5, 1.5));
-  for (let i = 0; i < 9; i++) stellate('l2', r(-1.5, 1.5), r(-1.5, 1.5));
-  for (let i = 0; i < 3; i++) stellate('l1', r(-1.5, 1.5), r(-1.5, 1.5));
-  // thalamic axons rising into layer IV, where they branch
+  // the typical cells, one tidy row: what each layer is known for (the two zoom-in dots stay on the same two cells:
+  // a big layer-V cell at the front right and a layer-III cell at the front left)
+  pyramidal('l5', 1.25, FRONT, 1.6).userData.dot = true;
+  pyramidal('l3', -1.3, FRONT, 0.9).userData.dot = true;
+  pyramidal('l3', -0.2, FRONT - 0.15, 0.85);
+  pyramidal('l3', 0.65, FRONT, 0.8);
+  pyramidal('l2', -0.75, FRONT - 0.1, 0.55);
+  pyramidal('l2', 0.2, FRONT, 0.5);
+  stellate('l2', 1.0, FRONT - 0.1);
+  stellate('l1', -0.3, FRONT - 0.2, null, 0.05); // layer I: almost no cell bodies
+  [-1.15, -0.45, 0.25, 0.95].forEach((x, i) => stellate('l4', x, FRONT - (i % 2) * 0.2, null, (i % 2 ? 0.07 : -0.07)));
+  pyramidal('l5', -0.85, FRONT - 0.1, 1.35);
+  pyramidal('l6', -0.25, FRONT, 0.7);
+  pyramidal('l6', 0.55, FRONT - 0.15, 0.65);
+  stellate('l6', 1.3, FRONT - 0.1);
+  // "Show the real density": the crowd that the real cortex has (hidden at first)
+  const crowd = new THREE.Group(); crowd.visible = false; stage.root.add(crowd);
+  const rx = () => r(-1.5, 1.5), rz = () => r(-D / 2 + 0.1, D / 2 - 0.1);
+  for (let i = 0; i < 8; i++) pyramidal('l3', rx(), rz(), 0.8, crowd);
+  for (let i = 0; i < 5; i++) pyramidal('l2', rx(), rz(), 0.5, crowd);
+  for (let i = 0; i < 5; i++) pyramidal('l5', rx(), rz(), 1.3, crowd);
+  for (let i = 0; i < 5; i++) pyramidal('l6', rx(), rz(), 0.65, crowd);
+  for (let i = 0; i < 16; i++) stellate('l4', rx(), rz(), crowd, r(-0.12, 0.12));
+  for (let i = 0; i < 10; i++) stellate('l2', rx(), rz(), crowd, r(-0.1, 0.1));
+  // thalamic axons rising into layer IV, where they branch (shown with the signal and input/output animations)
   const thal = [];
-  for (let k = 0; k < 5; k++) { const x = r(-1.3, 1.3), z = r(-1.3, 1.3), top4 = V(x, mids.l4, z); thal.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(x + r(-0.2, 0.2), bottom - 0.85, z), V(x, bottom, z), top4]), 20, 0.012, 4, false)); for (let j = 0; j < 4; j++) { const a = j * 1.6 + k; thal.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([top4, top4.clone().add(V(Math.cos(a) * 0.2, 0.08, Math.sin(a) * 0.2)), top4.clone().add(V(Math.cos(a) * 0.38, r(-0.1, 0.12), Math.sin(a) * 0.38))]), 8, 0.007, 4, false)); } }
-  stage.add(meshOf(thal, mat('#0ea5e9', { rough: 0.5 })), 'l4');
+  for (const x of [-1.2, -0.4, 0.4, 1.2]) { const z = FRONT - 0.35, top4 = V(x, mids.l4, z); thal.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(x + 0.1, bottom - 0.85, z), V(x, bottom, z), top4]), 20, 0.014, 4, false)); for (let j = 0; j < 4; j++) { const a = j * 1.57 + x; thal.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([top4, top4.clone().add(V(Math.cos(a) * 0.18, 0.08, Math.sin(a) * 0.08)), top4.clone().add(V(Math.cos(a) * 0.34, r(-0.08, 0.1), Math.sin(a) * 0.12))]), 8, 0.008, 4, false)); } }
+  const thalamic = meshOf(thal, mat('#0ea5e9', { rough: 0.5 }));
+  thalamic.visible = false;
+  stage.add(thalamic, 'l4');
+  const showThalamic = (on) => { thalamic.visible = on; stage.needsRender = true; };
 
-  // Signal flow: thalamus → IV → II/III → V → out
+  // Signal flow: thalamus → IV → II/III → V → out (drawn in front of the cells)
+  const zf = D / 2 - 0.05;
   const curves = [
-    [V(-0.3, bottom - 1.2, 0.3), V(-0.3, bottom, 0.3), V(-0.2, mids.l4, 0.2)],
-    [V(-0.2, mids.l4, 0.2), V(0, mids.l3, 0), V(0.2, mids.l2, -0.1)],
-    [V(0.2, mids.l2, -0.1), V(0.4, mids.l3, -0.2), V(0.5, mids.l5, -0.3)],
-    [V(0.5, mids.l5, -0.3), V(0.6, bottom, -0.3), V(0.7, bottom - 1.2, -0.3)],
+    [V(-0.3, bottom - 1.2, zf), V(-0.3, bottom, zf), V(-0.2, mids.l4, zf)],
+    [V(-0.2, mids.l4, zf), V(0, mids.l3, zf), V(0.2, mids.l2, zf)],
+    [V(0.2, mids.l2, zf), V(0.4, mids.l3, zf), V(0.5, mids.l5, zf)],
+    [V(0.5, mids.l5, zf), V(0.6, bottom, zf), V(0.7, bottom - 1.2, zf)],
   ].map((pts) => flow(stage, new THREE.CatmullRomCurve3(pts), { color: '#f97316', count: 8, size: 0.2, speed: 0.5 }));
   curves.forEach((c) => c.setActive(false));
   const tl = timeline(stage);
   // a cortical column: a narrow cylinder of cells through all six layers that work as one unit (e.g. all respond to one
-  // whisker, or one line orientation). A few cells are added inside it so every layer has some.
-  const COL = { x: 0.2, z: 0.2, r: 0.75 };
-  [['l4', 'st'], ['l4', 'st'], ['l2', 'st'], ['l3', 'py'], ['l5', 'py'], ['l6', 'py']].forEach(([ly, k]) => (k === 'st' ? stellate(ly, COL.x + r(-0.4, 0.4), COL.z + r(-0.4, 0.4)) : pyramidal(ly, COL.x + r(-0.4, 0.4), COL.z + r(-0.4, 0.4), 1)));
-  const colCyl = cyl(COL.r, COL.r, 1.6 - bottom, '#f97316', { opacity: 0.12 }); colCyl.position.set(COL.x, (1.6 + bottom) / 2, COL.z); colCyl.visible = false; stage.root.add(colCyl);
-  const inCol = cells.filter((c) => Math.hypot(c.g.position.x - COL.x, c.g.position.z - COL.z) < COL.r);
+  // whisker, or one line orientation). Its own cells appear with it, so every layer has some.
+  const COL = { x: 0.25, z: 0, r: 0.55 };
+  const colCells = new THREE.Group(); colCells.visible = false; stage.root.add(colCells);
+  [['l4', 'st', 0.1], ['l4', 'st', 0.45], ['l2', 'st', 0.35], ['l3', 'py', 0.3], ['l5', 'py', 0.2], ['l6', 'py', 0.3]].forEach(([ly, k, x]) => (k === 'st' ? stellate(ly, x, -0.1, colCells) : pyramidal(ly, x, -0.15, 1, colCells)));
+  const colCyl = cyl(COL.r, COL.r, 1.6 - bottom, '#f97316', { opacity: 0.1 }); colCyl.material.depthWrite = false; colCyl.position.set(COL.x, (1.6 + bottom) / 2, COL.z); colCyl.visible = false; stage.root.add(colCyl);
+  const inCol = cells.filter((c) => Math.abs(c.g.position.x - COL.x) < COL.r && (c.g.parent === colCells || c.g.parent === stage.root));
   const ORDER = ['l4', 'l3', 'l2', 'l5', 'l6'];
   let colT = -1, lastLayer = '';
   const glow = (c, k) => c.g.traverse((o) => { if (o.isMesh) o.material.emissive.set('#fb923c').multiplyScalar(k); });
+
+  // ---------------------------------------------------------------- the layer ruler (HTML, beside the slice)
+  const ruler = document.createElement('div');
+  ruler.className = 'cx-ruler';
+  ruler.innerHTML = LAYERS.map(([id, rom, , color, , , ren, rhe]) => `<button class="cx-l" data-l="${id}" style="--c:${color}"><b>${rom}</b><span>${L(ren, rhe)}</span></button>`).join('');
+  stage.addHtml(ruler);
+  const tip = document.createElement('div');
+  tip.className = 'cx-tip'; tip.hidden = true;
+  stage.addHtml(tip);
+  let picked = null; // a layer picked from the ruler (stays lit until picked again or another one)
+  const info = (id) => { const l = LAYERS.find((x) => x[0] === id); return l && `<b>${L(l[4], l[5])}</b><br>${L(l[8], l[9])}`; };
+  const light = (id) => {
+    stage.focus(id ? [id] : []);
+    ruler.querySelectorAll('.cx-l').forEach((b) => b.classList.toggle('on', b.dataset.l === id));
+    tip.hidden = !id;
+    if (id) { tip.innerHTML = info(id); tip.dataset.l = id; }
+  };
+  ruler.querySelectorAll('.cx-l').forEach((b) => {
+    const id = b.dataset.l;
+    b.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse' && !picked) light(id); });
+    b.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse' && !picked) light(null); });
+    b.addEventListener('focus', () => { if (!picked) light(id); });
+    b.addEventListener('blur', () => { if (!picked) light(null); });
+    b.addEventListener('click', () => { picked = picked === id ? null : id; light(picked); readout(picked ? info(picked) : ''); });
+  });
+  const v3 = new THREE.Vector3();
+  const place = () => {
+    const show = !stage.realShown && !stage.isolated && !stage.comparing;
+    ruler.hidden = !show; if (!show) { tip.hidden = true; return; }
+    const w = stage.container.clientWidth, h = stage.container.clientHeight;
+    // each button sits level with its layer, just left of the slice's front-left edge; with too little room (phones)
+    // the buttons show only the numeral, and the name comes in the tip
+    let left = Infinity;
+    const ys = LAYERS.map(([id]) => { v3.set(-W / 2, mids[id], D / 2).project(stage.camera); left = Math.min(left, (v3.x + 1) / 2 * w); return (1 - v3.y) / 2 * h; });
+    const narrow = left < 190;
+    ruler.classList.toggle('narrow', narrow);
+    const x = `${Math.max(narrow ? 40 : 4, left - 8)}px`;
+    ruler.style.setProperty('--x', x); tip.style.setProperty('--x', x);
+    ruler.querySelectorAll('.cx-l').forEach((b, i) => { b.style.top = `${ys[i].toFixed(1)}px`; });
+    if (!tip.hidden) { const i = LAYERS.findIndex((l) => l[0] === tip.dataset.l); tip.style.top = `${ys[i].toFixed(1)}px`; }
+  };
+
   stage.onUpdate((dt) => {
+    place();
     if (colT < 0) return;
     colT += dt;
     const step = Math.floor(colT / 0.9);
@@ -170,16 +244,20 @@ function cortexScene(stage, { readout, L }) {
     if (!ly && colT > ORDER.length * 0.9 + 2) { colT = -1; cells.forEach((c) => glow(c, 0)); stage.focus([]); readout(''); }
   });
   return {
-    home: { pos: V(4.5, 1.2, 6.5), target: V(0, -0.4, 0) },
+    // nearly face-on, like the book's figure (a little from the right and above, so it still reads as 3D)
+    home: { pos: V(1.6, 0.9, 7.4), target: V(0, -0.35, 0) },
     actions: [
       { icon: '📥', label: B('Follow a signal through the layers', 'מעקב אחר אות דרך השכבות'), caption: B('Sensory input from the thalamus (blue axons) arrives in layer IV → passes up to layers II/III → then down to layer V, whose big pyramidal cells send the output out of the cortex.', 'קלט חושי מהתלמוס (אקסונים כחולים) מגיע לשכבה IV ← עולה לשכבות II/III ← ואז יורד לשכבה V, שהתאים הפירמידליים הגדולים שלה שולחים את הפלט אל מחוץ לקליפה.'), run: () => {
         curves.forEach((c) => c.setActive(false));
+        showThalamic(true);
         const seq = [['l4'], ['l2', 'l3'], ['l5'], ['white']];
         curves.forEach((c, i) => tl.later(i * 1.3, () => { c.setActive(true); stage.focus(seq[i]); }));
-        tl.later(6.5, () => { curves.forEach((c) => c.setActive(false)); stage.focus([]); });
+        tl.later(6.5, () => { curves.forEach((c) => c.setActive(false)); stage.focus([]); showThalamic(false); });
       } },
-      { icon: '🎯', label: B('Input vs output layers', 'שכבות קלט ופלט'), caption: B('Layer IV (green) receives input; layer V (blue) sends output. Sensory cortex has a thick layer IV; motor cortex has a thick layer V. The stained walls show it too: layer IV is a dense band of small cells, layer V has scattered big ones.', 'שכבה IV (ירוק) מקבלת קלט; שכבה V (כחול) שולחת פלט. בקליפה החושית שכבה IV עבה; בקליפה המוטורית שכבה V עבה. גם הקירות הצבועים מראים זאת: שכבה IV היא פס צפוף של תאים קטנים, ובשכבה V יש תאים גדולים ופזורים.'), run: () => stage.focus(['l4', 'l5']) },
-      { icon: '🏛️', label: B('Fire one cortical column', 'הפעלת עמודה אחת'), toggle: true, caption: B('The cortex is built of thin columns (about 0.5 mm wide) running through all six layers. The cells in one column respond to the same thing, for example one whisker of a mouse or one line angle in vision. Watch the column light up layer by layer: IV → II/III → V → VI.', 'הקליפה בנויה מעמודות דקות (ברוחב של כ-0.5 מ"מ) שעוברות דרך כל שש השכבות. התאים בעמודה אחת מגיבים לאותו דבר, למשל לשפם אחד של עכבר או לזווית קו אחת בראייה. צפו בעמודה נדלקת שכבה אחרי שכבה: IV ← II/III ← V ← VI.'), run: (on) => { colCyl.visible = on; colT = on ? 0 : -1; lastLayer = ''; if (!on) { cells.forEach((c) => glow(c, 0)); stage.focus([]); readout(''); } } },
+      { icon: '🎯', label: B('Input vs output layers', 'שכבות קלט ופלט'), caption: B('Layer IV (green) receives input from the thalamus (blue axons); layer V (blue) sends output. Sensory cortex has a thick layer IV; motor cortex has a thick layer V. The stained wall shows it too: layer IV is a dense band of small cells, layer V has scattered big ones.', 'שכבה IV (ירוק) מקבלת קלט מהתלמוס (אקסונים כחולים); שכבה V (כחול) שולחת פלט. בקליפה החושית שכבה IV עבה; בקליפה המוטורית שכבה V עבה. גם הקיר הצבוע מראה זאת: שכבה IV היא פס צפוף של תאים קטנים, ובשכבה V יש תאים גדולים ופזורים.'), run: () => { showThalamic(true); stage.focus(['l4', 'l5']); } },
+      { icon: '🏛️', label: B('Fire one cortical column', 'הפעלת עמודה אחת'), toggle: true, caption: B('The cortex is built of thin columns (about 0.5 mm wide) running through all six layers. The cells in one column respond to the same thing, for example one whisker of a mouse or one line angle in vision. Watch the column light up layer by layer: IV → II/III → V → VI.', 'הקליפה בנויה מעמודות דקות (ברוחב של כ-0.5 מ"מ) שעוברות דרך כל שש השכבות. התאים בעמודה אחת מגיבים לאותו דבר, למשל לשפם אחד של עכבר או לזווית קו אחת בראייה. צפו בעמודה נדלקת שכבה אחרי שכבה: IV ← II/III ← V ← VI.'), run: (on) => { colCyl.visible = on; colCells.visible = on; colT = on ? 0 : -1; lastLayer = ''; if (!on) { cells.forEach((c) => glow(c, 0)); stage.focus([]); readout(''); } } },
+      { icon: '🧫', label: B('Show the real density', 'הצגת הצפיפות האמיתית'), toggle: true, caption: B('Only a few typical cells are drawn so the layers are easy to see. Real cortex is packed: tens of thousands of neurons in every cubic millimetre, their branches woven together. This adds a crowd of cells.', 'רק כמה תאים טיפוסיים מצוירים כדי שהשכבות יהיו ברורות. הקליפה האמיתית צפופה: עשרות אלפי נוירונים בכל מילימטר מעוקב, והענפים שלהם שזורים זה בזה. זה מוסיף המון תאים.'), run: (on) => { crowd.visible = on; stage.needsRender = true; } },
+      { icon: '🩸', label: B('Show blood vessels', 'הצגת כלי הדם'), toggle: true, caption: B('Arteries run over the surface and dive straight down, branching into capillaries in every layer: the brain uses about a fifth of the body\'s oxygen.', 'עורקים עוברים על פני השטח וצוללים ישר למטה, ומתפצלים לנימים בכל שכבה: המוח צורך כחמישית מהחמצן של הגוף.'), run: (on) => { vessels.visible = on; stage.needsRender = true; } },
     ],
   };
 }

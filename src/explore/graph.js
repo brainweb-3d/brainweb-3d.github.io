@@ -7,6 +7,8 @@ import { SCENES } from '../../content/catalog.js';
 
 const B = (en, he) => ({ en, he });
 // H(id, part, to, kind, label[, extra]) — `id` is unique within the place.
+// extra.alone: a dot into molecule/transmitters about one transmitter: it is shown on its own on arrival, and the
+// 🧪 card says what it does in the place you came from (content/chemistry.js DIVE_CHEM).
 const H = (id, part, to, kind, label, extra = {}) => ({ id, part, to, kind, label, ...extra });
 
 export const ROOT = 'organ/brain';
@@ -184,7 +186,7 @@ const GRAPH = {
     parent: 'organ/brain',
     hotspots: [
       H('hpa', 'adrenal', 'system/hpa', 'side', B('Hormones & stress', 'הורמונים ולחץ')),
-      H('ne', 'sympathetic', 'molecule/transmitters', 'in', B('Its messenger: norepinephrine', 'השליח שלה: נוראפינפרין')),
+      H('ne', 'sympathetic', 'molecule/transmitters', 'in', B('Its messenger: norepinephrine', 'השליח שלה: נוראפינפרין'), { alone: 'norepinephrine' }),
       H('nerve', 'para', 'tissue/nerve', 'in', B('Zoom in: a nerve', 'זום פנימה: עצב')),
       H('balance', 'heart', 'organism/homeostasis', 'out', B('Keeping the body in balance', 'שמירה על איזון בגוף')),
       H('nervous', 'cord', 'system/nervous', 'side', B('The whole nervous system', 'מערכת העצבים כולה')),
@@ -205,7 +207,7 @@ const GRAPH = {
       H('retina', 'eyes', 'tissue/retina', 'in', B('Zoom in: the retina', 'זום פנימה: הרשתית')),
       H('hpa', 'pineal', 'system/hpa', 'in', B('Hormones of the brain', 'ההורמונים של המוח')),
       H('balance', 'scn', 'organism/homeostasis', 'side', B('Keeping in balance', 'שמירה על איזון')),
-      H('adenosine', 'brain', 'molecule/transmitters', 'in', B('Adenosine: the sleepy molecule', 'אדנוזין: מולקולת העייפות')),
+      H('adenosine', 'brain', 'molecule/transmitters', 'in', B('Adenosine: the sleepy molecule', 'אדנוזין: מולקולת העייפות'), { alone: 'adenosine' }),
     ],
   },
   'organism/homeostasis': {
@@ -233,7 +235,7 @@ const GRAPH = {
       H('cortex', 'prefrontal', 'tissue/cortex', 'in', B('Zoom in: the cortex', 'זום פנימה: הקליפה')),
       H('real', 'cerebellum', 'cell/real', 'in', B('Purkinje cells of the cerebellum', 'תאי פורקינייה של המוח הקטן')),
       H('hpa', 'amygdala', 'system/hpa', 'in', B('Emotion, stress and memory', 'רגש, לחץ וזיכרון')),
-      H('dopamine', 'basal', 'molecule/transmitters', 'in', B('Dopamine and habits', 'דופמין והרגלים')),
+      H('dopamine', 'basal', 'molecule/transmitters', 'in', B('Dopamine and habits', 'דופמין והרגלים'), { alone: 'dopamine' }),
     ],
   },
   'methods/histology': {

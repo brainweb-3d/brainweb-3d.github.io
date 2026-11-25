@@ -14,10 +14,22 @@ const P = (r, s, off) => (s || off ? [r, s || '', off || [0, 0, 0]] : r);
 // Several pathways fan out from one source to many cortical targets
 const fan = (src, side, targets) => targets.map(([r, s, off, via]) => [P(src, side), ...(via ? [via] : []), P(r, s, off)]);
 
+// Points on the cortex surface for small areas that have no part of their own (see `surfacePoint` in BrainScene).
+const S = (r, s, off) => ({ s: [r, s, off] });
+const FEF_R = S('frontal', 'R', [0.6, 0.8, -1.1]), FEF_L = S('frontal', 'L', [-0.6, 0.8, -1.1]); // frontal eye field
+const DLPFC_R = S('frontal', 'R', [1.1, 0.35, 0.2]), DLPFC_L = S('frontal', 'L', [-1.1, 0.35, 0.2]); // middle frontal gyrus
+const VFC_R = S('frontal', 'R', [1.1, -0.55, -0.2]); // right inferior frontal gyrus (ventral frontal cortex)
+const IPS_R = S('parietal', 'R', [0.45, 1.1, 0]), IPS_L = S('parietal', 'L', [-0.45, 1.1, 0]); // intraparietal sulcus / SPL
+const TPJ_R = S('parietal', 'R', [1.1, -0.8, -0.3]); // right temporoparietal junction
+const PULVINAR_R = P('thalamus', 'R', [0, 0.1, -0.85]); // back of the thalamus
+const ACC = P('cingulate', 'R', [0, 0.1, 0.75]); // anterior cingulate (front of the cingulate gyrus)
+const AINS_R = P('insula', 'R', [0, 0.1, 0.75]); // anterior insula
+
 export const PATHWAY_GROUPS = {
   transmitters: { en: 'Neurotransmitter systems', he: 'מערכות מוליכים עצביים' },
   senses: { en: 'Senses (try a stimulus)', he: 'חושים (נסו גירוי)' },
   action: { en: 'Movement, memory & emotion', he: 'תנועה, זיכרון ורגש' },
+  attention: { en: 'Attention', he: 'קשב' },
 };
 
 export const PATHWAYS = [
@@ -223,6 +235,45 @@ export const PATHWAYS = [
       { regions: ['hypothalamus', 'pituitary'], caption: { en: 'CRH reaches the pituitary, which releases ACTH into the blood.', he: 'CRH מגיע לבלוטת יותרת המוח, שמשחררת ACTH לדם.' }, paths: [[P('hypothalamus'), P('pituitary')]] },
       { regions: ['pituitary'], caption: { en: 'ACTH travels in the blood to the adrenal glands, which release cortisol.', he: 'ACTH עובר בדם לבלוטות יותרת הכליה, שמשחררות קורטיזול.' }, paths: [[P('pituitary'), { v: 'adrenal' }]] },
       { regions: ['hippocampus', 'hypothalamus'], caption: { en: 'Cortisol returns to the brain: the hippocampus and hypothalamus detect it and switch the response off (negative feedback). Chronic stress can damage the hippocampus.', he: 'קורטיזול חוזר למוח: ההיפוקמפוס וההיפותלמוס מזהים אותו ומכבים את התגובה (משוב שלילי). לחץ כרוני עלול לפגוע בהיפוקמפוס.' }, paths: [[{ v: 'adrenal' }, P('spinalCord', '', [0, 0, 0.8]), P('hippocampus', 'L')], [{ v: 'adrenal' }, P('hypothalamus')]], color: '#3cb37a' },
+    ],
+  },
+
+  // ===================== Attention =====================
+  // Posner & Petersen's three networks (Petersen & Posner 2012), with orienting split into the ventral ("circuit
+  // breaker") and dorsal networks (Corbetta & Shulman 2002; Corbetta, Patel & Shulman 2008) and the executive
+  // conflict signal in the anterior cingulate and anterior insula (Menon & Uddin 2010). The book (Freberg) has
+  // the reticular formation for arousal and attention (ch. 2), the dorsolateral prefrontal cortex for executive
+  // attention (ch. 2, 13), right-sided damage in neglect (ch. 7) and slower prefrontal maturation in ADHD (ch. 16).
+  // Small areas without a part of their own are glowing "spots" on the surface ({ s: … }); places are approximate.
+  {
+    id: 'attention', group: 'attention', color: '#22d3ee', icon: '🔦', tryIt: true, view: [1, 0.45, 0.35],
+    name: { en: 'Attention networks', he: 'רשתות הקשב' },
+    stimulus: { en: 'A warning beep, a flash on your left, then the word RED printed in blue ink', he: 'צפצוף אזהרה, הבזק משמאל, ואז המילה "אדום" כתובה בדיו כחולה' },
+    desc: { en: 'Three attention networks (Posner & Petersen): alerting gets you ready, orienting picks where to look, and executive control settles conflicts. Glowing dots mark small areas; their places are approximate. Your book links neglect (ignoring one side of space) to damage on the right side of the brain. Today it is tied mostly to the right temporoparietal junction and its connections.', he: 'שלוש רשתות קשב (פוזנר ופטרסן): עוררות מכינה אתכם, התמצאות בוחרת לאן להסתכל, ושליטה ניהולית מכריעה בקונפליקטים. נקודות זוהרות מסמנות אזורים קטנים; מיקומן משוער. הספר קושר הזנחה (התעלמות מצד אחד של המרחב) לפגיעה בצד ימין של המוח. היום היא נקשרת בעיקר לצומת הרקתי-קודקודי הימני ולחיבוריו.' },
+    lessons: ['2.3', '2.4', '7.2', '16.4'],
+    stages: [
+      { color: '#facc15', regions: ['reticular', 'locusCoeruleus', 'thalamus', 'frontal', 'parietal'],
+        caption: { en: 'Alerting: a warning beep. Your book: the reticular formation in the brainstem controls arousal and attention. Today: the locus coeruleus sends norepinephrine to the thalamus and cortex, mostly on the right side, so you are ready to respond.', he: 'עוררות: צפצוף אזהרה. בספר: התצורה הרשתית בגזע המוח שולטת בעוררות ובקשב. היום: הלוקוס צרולאוס שולח נוראפינפרין לתלמוס ולקליפה, בעיקר בצד ימין, כדי שתהיו מוכנים להגיב.' },
+        paths: [[P('reticular', 'L'), P('thalamus', 'L')], [P('reticular', 'R'), P('thalamus', 'R')],
+          ...fan('locusCoeruleus', 'R', [['frontal', 'R', [0.5, 0.4, 0.3]], ['parietal', 'R', [0.3, 0.3, 0]], ['thalamus', 'R']]),
+          ...fan('locusCoeruleus', 'L', [['frontal', 'L', [-0.5, 0.4, 0.3]]])] },
+      { color: '#22d3ee', regions: ['superiorColliculus', 'thalamus', 'parietal', 'frontal'],
+        caption: { en: 'Orienting, automatic: a flash appears on your left. The superior colliculus and the pulvinar (in the thalamus) pass it on, and the right temporoparietal junction and inferior frontal gyrus act as a "circuit breaker" that pulls your attention there. This ventral network works mainly on the right.', he: 'התמצאות אוטומטית: הבזק מופיע משמאל. הקוליקולוס העליון והפולווינר (בתלמוס) מעבירים אותו, והצומת הרקתי-קודקודי והפיתול המצחי התחתון בצד ימין פועלים כ"מפסק" שמושך את הקשב לשם. הרשת הגחונית הזו פועלת בעיקר בצד ימין.' },
+        paths: [[{ v: 'eyeL' }, P('superiorColliculus', 'R')], [{ v: 'eyeR' }, P('superiorColliculus', 'R')],
+          [P('superiorColliculus', 'R'), PULVINAR_R, TPJ_R], [TPJ_R, VFC_R]],
+        spots: [{ at: PULVINAR_R, label: { en: 'Pulvinar', he: 'פולווינר' } }, { at: TPJ_R, label: { en: 'Temporoparietal junction', he: 'צומת רקתי-קודקודי' } }, { at: VFC_R, label: { en: 'Inferior frontal gyrus', he: 'פיתול מצחי תחתון' } }] },
+      { color: '#22d3ee', regions: ['frontal', 'parietal', 'occipital', 'basalForebrain'],
+        caption: { en: 'Orienting, by choice: you decide to look at the flash. The frontal eye fields and the intraparietal sulcus, on both sides (the dorsal network), move your focus with help from acetylcholine and turn up the visual cortex for that spot. You can even shift attention without moving your eyes.', he: 'התמצאות מבחירה: אתם מחליטים להסתכל על ההבזק. שדות העין המצחיים והחריץ הבין-קודקודי, בשני הצדדים (הרשת הגבית), מזיזים את המיקוד בעזרת אצטילכולין ומגבירים את קליפת הראייה עבור המקום הזה. אפשר להזיז את הקשב גם בלי להזיז את העיניים.' },
+        paths: [[FEF_R, IPS_R], [FEF_L, IPS_L], [IPS_R, P('occipital', 'R', [0.3, 0.3, 0])], [P('basalForebrain', 'R'), IPS_R]],
+        spots: [{ at: FEF_R, label: { en: 'Frontal eye field', he: 'שדה העין המצחי' } }, { at: FEF_L }, { at: IPS_R, label: { en: 'Intraparietal sulcus', he: 'חריץ בין-קודקודי' } }, { at: IPS_L }] },
+      { color: '#f472b6', regions: ['cingulate', 'insula', 'occipital'],
+        caption: { en: 'Executive control, part 1: the word RED printed in blue ink. Reading the word and naming the ink compete. The anterior cingulate and the anterior insula notice the conflict and raise the alarm.', he: 'שליטה ניהולית, חלק 1: המילה "אדום" כתובה בדיו כחולה. קריאת המילה ושיום הצבע מתחרים. קליפת החגורה הקדמית והאינסולה הקדמית מזהות את הקונפליקט ומתריעות.' },
+        paths: [[P('occipital', 'R'), ACC], [P('occipital', 'L'), ACC], [ACC, AINS_R]],
+        spots: [{ at: ACC, dy: 0.13, label: { en: 'Anterior cingulate', he: 'חגורה קדמית' } }, { at: AINS_R, dy: -0.07, label: { en: 'Anterior insula', he: 'אינסולה קדמית' } }] },
+      { color: '#f472b6', regions: ['frontal', 'cingulate', 'vta'],
+        caption: { en: 'Executive control, part 2: the dorsolateral prefrontal cortex takes charge and holds the goal ("name the ink colour"). Your book calls it a centre of executive attention. Dopamine from the VTA helps, and in ADHD these frontal areas mature more slowly.', he: 'שליטה ניהולית, חלק 2: הקליפה הקדם-מצחית הגבית-צדית לוקחת פיקוד ושומרת על המטרה ("לומר את צבע הדיו"). הספר מתאר אותה כמרכז של קשב ניהולי. דופמין מה-VTA עוזר, וב-ADHD האזורים המצחיים האלה מבשילים לאט יותר.' },
+        paths: [[ACC, DLPFC_R], [ACC, DLPFC_L], [P('vta', 'R'), DLPFC_R], [P('vta', 'L'), DLPFC_L]],
+        spots: [{ at: DLPFC_R, label: { en: 'Dorsolateral prefrontal cortex', he: 'קליפה קדם-מצחית גבית-צדית' } }, { at: DLPFC_L }] },
     ],
   },
 ];

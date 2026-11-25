@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { bilayer, helixGeo, lumpGeo, meshOf } from '../proteins.js';
 import { V, sphere, textSprite, mat, rod } from '../build.js';
 import { moleculeData, buildMolecule, setMoleculeStyle, proteinData, buildProtein, uprightQuaternion } from '../data.js';
+import { MESSENGERS, messengerColors } from '../../../content/chemistry.js';
 
 const B = (en, he) => ({ en, he });
 const SCALE = 0.42; // scene units per ångström
@@ -29,7 +30,9 @@ const INFO = {
   tubocurarine: [B('Tubocurarine (curare)', 'טובוקורארין (קורארה)'), B('The active part of curare arrow poison: blocks nicotinic ACh receptors on muscles → paralysis. Notice how big it is compared with ACh.', 'החלק הפעיל ברעל החיצים קורארה: חוסם קולטני ACh ניקוטיניים בשרירים ← שיתוק. שימו לב כמה הוא גדול לעומת ACh.'), [4, 8]],
   ttx: [B('Tetrodotoxin (TTX)', 'טטרודוטוקסין (TTX)'), B('Pufferfish poison: plugs voltage-gated Na⁺ channels, so nerves cannot fire.', 'רעל דג הנפוחית: פוקק תעלות Na⁺ תלויות מתח, ולכן עצבים לא יכולים לירות.'), [3]],
 };
-const COLOR = { glutamate: '#ef4444', gaba: '#3b82f6', glycine: '#60a5fa', acetylcholine: '#ec4899', dopamine: '#f59e0b', norepinephrine: '#fb923c', serotonin: '#8b5cf6', histamine: '#14b8a6', adenosine: '#64748b', amphetamine: '#f97316', nicotine: '#84cc16', caffeine: '#a16207', cocaine: '#e2e8f0', morphine: '#c084fc', thc: '#22c55e', diazepam: '#38bdf8', ldopa: '#fbbf24', tubocurarine: '#b45309', ttx: '#0ea5e9' };
+// Transmitter names and colours come from the shared list (content/chemistry.js), so every place uses the same ones.
+for (const m of Object.values(MESSENGERS)) if (m.molecule && INFO[m.molecule]) INFO[m.molecule][0] = m.name;
+const COLOR = { glutamate: '#ef4444', gaba: '#3b82f6', glycine: '#60a5fa', acetylcholine: '#ec4899', dopamine: '#f59e0b', norepinephrine: '#fb923c', serotonin: '#8b5cf6', histamine: '#14b8a6', adenosine: '#64748b', amphetamine: '#f97316', nicotine: '#84cc16', caffeine: '#a16207', cocaine: '#e2e8f0', morphine: '#c084fc', thc: '#22c55e', diazepam: '#38bdf8', ldopa: '#fbbf24', tubocurarine: '#b45309', ttx: '#0ea5e9', ...messengerColors() };
 
 /** A button that lights up one group of molecules and explains what they share in the readout. */
 const groupActions = (stage, readout, L, list) => list.map(([icon, en, he, ids, den, dhe]) => ({ icon, label: B(en, he), radio: true, caption: B(den, dhe), run: () => { stage.focus(ids); readout(`<b>${L(en, he)}</b>: ${ids.map((id) => L(INFO[id][0].en, INFO[id][0].he)).join(' · ')}`); } }));

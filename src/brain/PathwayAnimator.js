@@ -1,6 +1,7 @@
 // Plays a pathway (from pathways.js) inside the 3D brain: glowing tracts that grow stage by stage,
 // with particles ("signals") streaming along them.
 import * as THREE from 'three';
+import { t } from '../i18n.js';
 
 const STAGE_SECONDS = 4.5; // how long each stage lasts when playing
 const PARTICLES_PER_PATH = 14;
@@ -20,6 +21,20 @@ function getDotTexture() {
   dotTexture = new THREE.CanvasTexture(c);
   return dotTexture;
 }
+
+/** A spot's name: a real HTML element over the 3D view (sharp at every size and zoom, unlike text drawn into a
+ *  texture), placed every frame on the spot's screen position. */
+function labelEl(text, color) {
+  const el = document.createElement('div');
+  el.className = 'pw-label';
+  el.dir = 'auto';
+  el.textContent = text;
+  el.style.setProperty('--pw-c', '#' + color.getHexString());
+  el.hidden = true;
+  return el;
+}
+
+const v3 = new THREE.Vector3();
 
 export class PathwayAnimator {
   /** @param brain BrainScene instance */
@@ -41,9 +56,13 @@ export class PathwayAnimator {
     this.onEnd = () => {};
   }
 
-  /** Resolve a point spec from pathways.js into a 3D position. */
+  /** Resolve a point spec from pathways.js into a 3D position. { s: [id, side, off] } = on the part's surface. */
   point(spec) {
     if (spec && spec.v) return this.brain.virtualPoint(spec.v);
+    if (spec && spec.s) {
+      const [id, s, off] = spec.s;
+      return this.brain.surfacePoint(id, s === 'L' ? -1 : s === 'R' ? 1 : 0, off || [0, 0, 0]);
+    }
     if (typeof spec === 'string') return this.brain.regionPoint(spec, 0, [0, 0, 0]);
     const [id, s, off] = spec;
     const side = s === 'L' ? -1 : s === 'R' ? 1 : 0;
@@ -89,7 +108,33 @@ export class PathwayAnimator {
           this.group.add(glow, tube, dots);
           return { curve, tube, glow, dots, n, phase: Math.random() };
         });
-      return { def: st, paths };
+      // Spots: small named areas without a part of their own (e.g. the frontal eye field), drawn as a glowing dot
+      // with a label. They appear with their stage and stay, like the tracts.
+      const spots = (st.spots || []).map((sp) => {
+        const at = this.point(sp.at);
+        if (!at) return null;
+        const g = new THREE.Group();
+        const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: getDotTexture(), color, transparent: true, depthTest: false, blending: THREE.AdditiveBlending }));
+        glow.scale.setScalar(0.11);
+        const core = new THREE.Sprite(new THREE.SpriteMaterial({ map: getDotTexture(), color: color.clone().lerp(new THREE.Color('#ffffff'), 0.6), transparent: true, depthTest: false }));
+        core.scale.setScalar(0.035);
+        g.add(glow, core);
+        g.position.copy(at);
+        let label = null;
+        if (sp.label) {
+          // the label's anchor: pushed outward from the brain's centre so it sits beside the spot, not on top of it
+          const out = at.clone().sub(this.brain.box().getCenter(new THREE.Vector3())).normalize();
+          const anchor = at.clone().add(out.multiplyScalar(0.07)).add(new THREE.Vector3(0, sp.dy ?? 0.05, 0)); // dy: move a label up/down so neighbours don't overlap
+          label = { el: labelEl(t(sp.label), color), anchor };
+          this.labelLayer().appendChild(label.el);
+        }
+        g.renderOrder = 13;
+        g.traverse((o) => { o.renderOrder = 13; });
+        g.visible = false;
+        this.group.add(g);
+        return { g, glow, label };
+      }).filter(Boolean);
+      return { def: st, paths, spots };
     });
     this.stageIndex = 0;
     this.time = 0;
@@ -103,8 +148,17 @@ export class PathwayAnimator {
     this.time = this.stageIndex * STAGE_SECONDS;
     // Stages before the current one are fully drawn; later ones hidden
     this.stages.forEach((st, k) => st.paths.forEach((p) => this.setProgress(p, k < this.stageIndex ? 1 : 0)));
+    this.showSpots();
     const st = this.stages[this.stageIndex];
     if (st) this.onStage(this.stageIndex, st.def);
+  }
+
+  /** Spots of this and earlier stages are shown; only the current stage's spots keep their labels (less clutter). */
+  showSpots() {
+    this.stages.forEach((st, k) => st.spots.forEach((s) => {
+      s.g.visible = k <= this.stageIndex;
+      if (s.label) s.label.el.hidden = k !== this.stageIndex;
+    }));
   }
 
   setProgress(p, f) {
@@ -113,6 +167,28 @@ export class PathwayAnimator {
     p.glow.geometry.setDrawRange(0, Math.floor(p.glow.geometry.index.count * f / 6) * 6);
     p.progress = f;
     p.dots.visible = f > 0.05;
+  }
+
+  /** The HTML layer for spot labels, over the brain's canvas (created on first use). */
+  labelLayer() {
+    if (!this.labels) {
+      this.labels = document.createElement('div');
+      this.labels.className = 'pw-labels';
+      this.brain.container.appendChild(this.labels);
+    }
+    return this.labels;
+  }
+
+  /** Put each shown label on its spot's screen position (hidden when behind the camera). */
+  placeLabels() {
+    const c = this.brain.container, w = c.clientWidth, h = c.clientHeight;
+    for (const st of this.stages) for (const s of st.spots) {
+      if (!s.label || s.label.el.hidden) continue;
+      v3.copy(s.label.anchor).project(this.brain.camera);
+      const off = v3.z > 1 || Math.abs(v3.x) > 1.2 || Math.abs(v3.y) > 1.2;
+      s.label.el.style.visibility = off ? 'hidden' : '';
+      if (!off) s.label.el.style.transform = `translate3d(${((v3.x + 1) / 2 * w).toFixed(1)}px,${((1 - v3.y) / 2 * h).toFixed(1)}px,0) translate(-50%,-50%)`;
+    }
   }
 
   /** Next / previous stage: it draws itself, then waits again. */
@@ -140,6 +216,7 @@ export class PathwayAnimator {
           this.onEnd();
         } else {
           this.stageIndex = idx;
+          this.showSpots();
           this.onStage(idx, this.stages[idx].def);
         }
       }
@@ -149,6 +226,11 @@ export class PathwayAnimator {
     if (st) st.paths.forEach((p) => this.setProgress(p, Math.max(p.progress || 0, local)));
     // Move particles along the drawn part of every visible path
     const now = performance.now() / 1000;
+    // The current stage's spots pulse; earlier ones glow steadily
+    this.stages.forEach((s, k) => s.spots.forEach((sp, j) => {
+      sp.glow.scale.setScalar(k === this.stageIndex ? 0.11 * (1 + 0.28 * Math.sin(now * 4 + j)) : 0.09);
+    }));
+    this.placeLabels();
     for (const s of this.stages) {
       for (const p of s.paths) {
         if (!p.dots.visible) continue;
@@ -165,10 +247,13 @@ export class PathwayAnimator {
 
   clear() {
     for (const obj of [...this.group.children]) {
-      obj.geometry?.dispose();
-      obj.material?.dispose();
+      obj.traverse((o) => {
+        o.geometry?.dispose();
+        o.material?.dispose();
+      });
       this.group.remove(obj);
     }
+    if (this.labels) this.labels.textContent = ''; // remove the spot labels
     this.pathway = null;
     this.stages = [];
     this.playing = false;
