@@ -38,22 +38,22 @@ This stretch is done when the local work below is accurate, the open issues are 
 - Dots on fight-or-flight, day and memory stay hidden (owner, 2026-11-15), so `DIVE_CHEM` is wired but unreachable and untested.
 
 ## Open issues
-1. **Security:** all `ortal-libon.github.io/*` pages share one origin, so any of them can read BrainWeb's localStorage: the Claude pairing token (`src/ai/claudeBridge.js:100`) and any saved API key. The earlier claim to the owner that their other Pages sites can't connect without the code is **wrong**. The token is also written unencrypted.
-2. Cortex: thalamic axons stay on after "Input vs output layers" (`tissue.js:257`; confirmed).
-3. Cortex: the column's cells are still faint (`tissue.js:184-188`; confirmed by screenshot).
-4. Language switch does not refresh the cortex ruler (`tissue.js:196`) or playing spot labels (`PathwayAnimator.js:128`); confirmed.
+1. **Security: fix built 2026-11-25, NOT published** (own address brainweb-3d.github.io; see the end of the log). Problem: all `ortal-libon.github.io/*` pages share one origin, so any of them can read BrainWeb's localStorage: the Claude pairing token (`src/ai/claudeBridge.js:100`) and any saved API key. The earlier claim to the owner that their other Pages sites can't connect without the code is **wrong**. The token is also written unencrypted.
+2. **Fixed 2026-11-25 (not committed).** Cortex: thalamic axons stay on after "Input vs output layers" (`tissue.js:257`; confirmed).
+3. **Fixed 2026-11-25 (not committed).** Cortex: the column's cells are still faint (`tissue.js:184-188`; confirmed by screenshot).
+4. **Fixed 2026-11-25 (not committed).** Language switch does not refresh the cortex ruler (`tissue.js:196`) or playing spot labels (`PathwayAnimator.js:128`); confirmed.
 5. Attention test: a set 40/30/80 ms responder scored 36/35/78, then 49/20/89; scores are noisier than reported (8 trials per cue). After a pause the progress bar restarts (`attentionTask.js:104`).
-6. **Fact check incomplete.** Chemistry: only some claims were searched in Freberg; unsupported there, e.g. olfactory glutamate (no hit), attention ACh/dopamine sites, dopamine and habits. Attention papers: read as search summaries, not full text. Model notes: models were seen (fMRI/DTI/PET reuse other pictures), but most "the drawn view shows…" sentences were not checked against scenes. "KCNQ1… measured structure" rests on the credits. Cortex "tens of thousands of neurons/mm³" is unsourced.
-7. `docs/decisions-log.md:528` says "18 pathways" and "26 of the 30 effects": should be 16 and 27 of 31 (owner was told the wrong numbers). Its "book check" wording overstates item 6.
+6. **Checked 2026-11-25, partly open (see the log). Earlier status:** Chemistry: only some claims were searched in Freberg; unsupported there, e.g. olfactory glutamate (no hit), attention ACh/dopamine sites, dopamine and habits. Attention papers: read as search summaries, not full text. Model notes: models were seen (fMRI/DTI/PET reuse other pictures), but most "the drawn view shows…" sentences were not checked against scenes. "KCNQ1… measured structure" rests on the credits. Cortex "tens of thousands of neurons/mm³" is unsourced.
+7. **Fixed 2026-11-25 (not committed).** `docs/decisions-log.md:528` says "18 pathways" and "26 of the 30 effects": should be 16 and 27 of 31 (owner was told the wrong numbers). Its "book check" wording overstates item 6.
 8. Not tested: real Claude Desktop, a real API key, Gemini sign-in; ChatGPT works only locally.
 9. A test run of the extension may have created `%APPDATA%\BrainWeb\claude-bridge.json` (its normal token file).
 
 ## Next steps
-1. Correct the counts and wording in the log (7).
-2. Fix 2, then 4, then 3.
-3. Tell the owner about 1 and agree a fix (e.g. own domain/origin, or session-only tokens).
-4. Finish the fact check (6); fix or mark what fails.
-5. Browser-test the built site (`npm run preview`), then ask the owner before any push.
+1. Correct the counts and wording in the log (7). Done 2026-11-25.
+2. Fix 2, then 4, then 3. Done 2026-11-25.
+3. Owner chose an own address; organization `brainweb-3d` exists; code ready. Left, each needing the owner's OK: commit, create repo `brainweb-3d/brainweb-3d.github.io` + Pages, push, then publish tools/old-site (index.html + 404.html) at the old address.
+4. Fact check (6): done 2026-11-25 as far as sources allowed; what is still NOT VERIFIED is listed at the end of docs/decisions-log.md.
+5. Built site browser-tested 2026-11-25 (see the log). After publishing: test the live site and pairing in the real Claude Desktop.
 
 ## Commands
 - Run: `npm run dev` → http://localhost:5173. Build: `npm run build`. Built site: `npm run preview -- --port 4173`.

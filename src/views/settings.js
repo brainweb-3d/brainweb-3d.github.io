@@ -12,7 +12,7 @@ import '../ai/connect.css';
 const L = (en, he) => (getLang() === 'he' ? he : en);
 const MCPB_URL = './brainweb-claude.mcpb';
 // Addresses the Claude extension accepts without setup (keep in step with ORIGINS in mcp/brainweb-claude/src/server.js).
-const KNOWN_ORIGIN = /^(http:\/\/(localhost|127\.0\.0\.1):(5173|4173)|https:\/\/ortal-libon\.github\.io)$/;
+const KNOWN_ORIGIN = /^(http:\/\/(localhost|127\.0\.0\.1):(5173|4173)|https:\/\/brainweb-3d\.github\.io)$/;
 
 /** Checks the shape of a pasted key and returns a problem description, or null if it looks right. */
 export function keyProblem(raw) {

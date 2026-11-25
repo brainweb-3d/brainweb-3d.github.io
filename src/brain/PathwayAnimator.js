@@ -1,7 +1,7 @@
 // Plays a pathway (from pathways.js) inside the 3D brain: glowing tracts that grow stage by stage,
 // with particles ("signals") streaming along them.
 import * as THREE from 'three';
-import { t } from '../i18n.js';
+import { t, getLang } from '../i18n.js';
 
 const STAGE_SECONDS = 4.5; // how long each stage lasts when playing
 const PARTICLES_PER_PATH = 14;
@@ -125,7 +125,7 @@ export class PathwayAnimator {
           // the label's anchor: pushed outward from the brain's centre so it sits beside the spot, not on top of it
           const out = at.clone().sub(this.brain.box().getCenter(new THREE.Vector3())).normalize();
           const anchor = at.clone().add(out.multiplyScalar(0.07)).add(new THREE.Vector3(0, sp.dy ?? 0.05, 0)); // dy: move a label up/down so neighbours don't overlap
-          label = { el: labelEl(t(sp.label), color), anchor };
+          label = { el: labelEl(t(sp.label), color), anchor, text: sp.label };
           this.labelLayer().appendChild(label.el);
         }
         g.renderOrder = 13;
@@ -182,6 +182,10 @@ export class PathwayAnimator {
   /** Put each shown label on its spot's screen position (hidden when behind the camera). */
   placeLabels() {
     const c = this.brain.container, w = c.clientWidth, h = c.clientHeight;
+    if (this.labelLang !== getLang()) { // the site's language was switched while the pathway plays
+      this.labelLang = getLang();
+      for (const st of this.stages) for (const s of st.spots) if (s.label) s.label.el.textContent = t(s.label.text);
+    }
     for (const st of this.stages) for (const s of st.spots) {
       if (!s.label || s.label.el.hidden) continue;
       v3.copy(s.label.anchor).project(this.brain.camera);

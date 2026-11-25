@@ -167,7 +167,9 @@ function cortexScene(stage, { readout, L }) {
   const thalamic = meshOf(thal, mat('#0ea5e9', { rough: 0.5 }));
   thalamic.visible = false;
   stage.add(thalamic, 'l4');
-  const showThalamic = (on) => { thalamic.visible = on; stage.needsRender = true; };
+  // two buttons need the axons: "Follow a signal" (while it plays) and "Input vs output layers" (while it is on)
+  let ioOn = false, signalOn = false;
+  const syncThalamic = () => { thalamic.visible = ioOn || signalOn; stage.needsRender = true; };
 
   // Signal flow: thalamus → IV → II/III → V → out (drawn in front of the cells)
   const zf = D / 2 - 0.05;
@@ -179,15 +181,26 @@ function cortexScene(stage, { readout, L }) {
   ].map((pts) => flow(stage, new THREE.CatmullRomCurve3(pts), { color: '#f97316', count: 8, size: 0.2, speed: 0.5 }));
   curves.forEach((c) => c.setActive(false));
   const tl = timeline(stage);
+  const stopSignal = () => { tl.clear(); curves.forEach((c) => c.setActive(false)); signalOn = false; syncThalamic(); };
   // a cortical column: a narrow cylinder of cells through all six layers that work as one unit (e.g. all respond to one
   // whisker, or one line orientation). Its own cells appear with it, so every layer has some.
   const COL = { x: 0.25, z: 0, r: 0.55 };
   const colCells = new THREE.Group(); colCells.visible = false; stage.root.add(colCells);
-  [['l4', 'st', 0.1], ['l4', 'st', 0.45], ['l2', 'st', 0.35], ['l3', 'py', 0.3], ['l5', 'py', 0.2], ['l6', 'py', 0.3]].forEach(([ly, k, x]) => (k === 'st' ? stellate(ly, x, -0.1, colCells) : pyramidal(ly, x, -0.15, 1, colCells)));
+  [['l4', 'st', 0], ['l4', 'st', 0.55], ['l2', 'st', 0.55], ['l3', 'py', 0.4, 0.8], ['l5', 'py', 0.02, 1.1], ['l6', 'py', 0.22, 0.65]].forEach(([ly, k, x, s]) => (k === 'st' ? stellate(ly, x, FRONT - 0.05, colCells) : pyramidal(ly, x, FRONT - 0.05, s, colCells)));
   const colCyl = cyl(COL.r, COL.r, 1.6 - bottom, '#f97316', { opacity: 0.1 }); colCyl.material.depthWrite = false; colCyl.position.set(COL.x, (1.6 + bottom) / 2, COL.z); colCyl.visible = false; stage.root.add(colCyl);
   const inCol = cells.filter((c) => Math.abs(c.g.position.x - COL.x) < COL.r && (c.g.parent === colCells || c.g.parent === stage.root));
   const ORDER = ['l4', 'l3', 'l2', 'l5', 'l6'];
   let colT = -1, lastLayer = '';
+  // While the column is on, the typical cells outside it fade, and the column's own cells stay solid. (Not with
+  // stage.focus: that fades every layer but one, so it faded the column's cells too.) The opacity is each mesh's base
+  // one, so hovering keeps it; needsUpdate, because a material first drawn opaque ignores its opacity until rebuilt.
+  const outCol = cells.filter((c) => !inCol.includes(c) && c.g.parent === stage.root);
+  const showColumn = (on) => {
+    colCyl.visible = colCells.visible = on;
+    outCol.forEach((c) => c.g.traverse((o) => { if (!o.isMesh) return; o.userData.baseOpacity = on ? 0.22 : 1; o.material.transparent = on; o.material.needsUpdate = true; }));
+    stage.refresh();
+  };
+  const litLayers = (ids) => ruler.querySelectorAll('.cx-l').forEach((b) => b.classList.toggle('on', ids.includes(b.dataset.l)));
   const glow = (c, k) => c.g.traverse((o) => { if (o.isMesh) o.material.emissive.set('#fb923c').multiplyScalar(k); });
 
   // ---------------------------------------------------------------- the layer ruler (HTML, beside the slice)
@@ -214,8 +227,18 @@ function cortexScene(stage, { readout, L }) {
     b.addEventListener('blur', () => { if (!picked) light(null); });
     b.addEventListener('click', () => { picked = picked === id ? null : id; light(picked); readout(picked ? info(picked) : ''); });
   });
+  // the ruler's words follow the site's language (checked every frame, so a scene kept in the background catches up too)
+  let langShown = L('en', 'he');
+  const relabel = () => {
+    if (L('en', 'he') === langShown) return;
+    langShown = L('en', 'he');
+    ruler.querySelectorAll('.cx-l').forEach((b, i) => { b.querySelector('span').textContent = L(LAYERS[i][6], LAYERS[i][7]); });
+    if (!tip.hidden) tip.innerHTML = info(tip.dataset.l);
+    if (picked && colT < 0) readout(info(picked));
+  };
   const v3 = new THREE.Vector3();
   const place = () => {
+    relabel();
     const show = !stage.realShown && !stage.isolated && !stage.comparing;
     ruler.hidden = !show; if (!show) { tip.hidden = true; return; }
     const w = stage.container.clientWidth, h = stage.container.clientHeight;
@@ -238,24 +261,24 @@ function cortexScene(stage, { readout, L }) {
     const step = Math.floor(colT / 0.9);
     cells.forEach((c) => glow(c, 0));
     const ly = ORDER[step];
-    if (ly) { inCol.filter((c) => c.layer === ly || (ly === 'l3' && c.layer === 'l2' && colT % 0.9 > 0.45)).forEach((c) => glow(c, 0.9)); if (ly !== lastLayer) { lastLayer = ly; stage.focus([ly]); } }
+    if (ly) { inCol.filter((c) => c.layer === ly || (ly === 'l3' && c.layer === 'l2' && colT % 0.9 > 0.45)).forEach((c) => glow(c, 0.9)); if (ly !== lastLayer) { lastLayer = ly; litLayers(ly === 'l3' || ly === 'l2' ? ['l2', 'l3'] : [ly]); } }
     const names = { l4: L('IV: input from the thalamus', 'IV: קלט מהתלמוס'), l3: L('II/III: talk to neighbouring columns', 'II/III: מדברים עם עמודות שכנות'), l2: L('II/III: talk to neighbouring columns', 'II/III: מדברים עם עמודות שכנות'), l5: L('V: output to the brainstem and spinal cord', 'V: פלט לגזע המוח ולחוט השדרה'), l6: L('VI: feedback to the thalamus', 'VI: משוב לתלמוס') };
     readout(ly ? `${L('Column active, layer', 'העמודה פעילה, שכבה')} ${names[ly]}` : L('The column has finished: input in, processed, sent out.', 'העמודה סיימה: קלט נכנס, עובד ונשלח החוצה.'));
-    if (!ly && colT > ORDER.length * 0.9 + 2) { colT = -1; cells.forEach((c) => glow(c, 0)); stage.focus([]); readout(''); }
+    if (!ly && colT > ORDER.length * 0.9 + 2) { colT = -1; cells.forEach((c) => glow(c, 0)); light(picked); readout(picked ? info(picked) : ''); }
   });
   return {
     // nearly face-on, like the book's figure (a little from the right and above, so it still reads as 3D)
     home: { pos: V(1.6, 0.9, 7.4), target: V(0, -0.35, 0) },
     actions: [
       { icon: '📥', label: B('Follow a signal through the layers', 'מעקב אחר אות דרך השכבות'), caption: B('Sensory input from the thalamus (blue axons) arrives in layer IV → passes up to layers II/III → then down to layer V, whose big pyramidal cells send the output out of the cortex.', 'קלט חושי מהתלמוס (אקסונים כחולים) מגיע לשכבה IV ← עולה לשכבות II/III ← ואז יורד לשכבה V, שהתאים הפירמידליים הגדולים שלה שולחים את הפלט אל מחוץ לקליפה.'), run: () => {
-        curves.forEach((c) => c.setActive(false));
-        showThalamic(true);
+        stopSignal(); // pressed again: start over
+        signalOn = true; syncThalamic();
         const seq = [['l4'], ['l2', 'l3'], ['l5'], ['white']];
         curves.forEach((c, i) => tl.later(i * 1.3, () => { c.setActive(true); stage.focus(seq[i]); }));
-        tl.later(6.5, () => { curves.forEach((c) => c.setActive(false)); stage.focus([]); showThalamic(false); });
+        tl.later(6.5, () => { stopSignal(); stage.focus([]); });
       } },
-      { icon: '🎯', label: B('Input vs output layers', 'שכבות קלט ופלט'), caption: B('Layer IV (green) receives input from the thalamus (blue axons); layer V (blue) sends output. Sensory cortex has a thick layer IV; motor cortex has a thick layer V. The stained wall shows it too: layer IV is a dense band of small cells, layer V has scattered big ones.', 'שכבה IV (ירוק) מקבלת קלט מהתלמוס (אקסונים כחולים); שכבה V (כחול) שולחת פלט. בקליפה החושית שכבה IV עבה; בקליפה המוטורית שכבה V עבה. גם הקיר הצבוע מראה זאת: שכבה IV היא פס צפוף של תאים קטנים, ובשכבה V יש תאים גדולים ופזורים.'), run: () => { showThalamic(true); stage.focus(['l4', 'l5']); } },
-      { icon: '🏛️', label: B('Fire one cortical column', 'הפעלת עמודה אחת'), toggle: true, caption: B('The cortex is built of thin columns (about 0.5 mm wide) running through all six layers. The cells in one column respond to the same thing, for example one whisker of a mouse or one line angle in vision. Watch the column light up layer by layer: IV → II/III → V → VI.', 'הקליפה בנויה מעמודות דקות (ברוחב של כ-0.5 מ"מ) שעוברות דרך כל שש השכבות. התאים בעמודה אחת מגיבים לאותו דבר, למשל לשפם אחד של עכבר או לזווית קו אחת בראייה. צפו בעמודה נדלקת שכבה אחרי שכבה: IV ← II/III ← V ← VI.'), run: (on) => { colCyl.visible = on; colCells.visible = on; colT = on ? 0 : -1; lastLayer = ''; if (!on) { cells.forEach((c) => glow(c, 0)); stage.focus([]); readout(''); } } },
+      { icon: '🎯', label: B('Input vs output layers', 'שכבות קלט ופלט'), toggle: true, caption: B('Layer IV (green) receives input from the thalamus (blue axons); layer V (blue) sends output. Sensory cortex has a thick layer IV; motor cortex has a thick layer V. The stained wall shows it too: layer IV is a dense band of small cells, layer V has scattered big ones.', 'שכבה IV (ירוק) מקבלת קלט מהתלמוס (אקסונים כחולים); שכבה V (כחול) שולחת פלט. בקליפה החושית שכבה IV עבה; בקליפה המוטורית שכבה V עבה. גם הקיר הצבוע מראה זאת: שכבה IV היא פס צפוף של תאים קטנים, ובשכבה V יש תאים גדולים ופזורים.'), run: (on) => { ioOn = on; stopSignal(); stage.focus(on ? ['l4', 'l5'] : []); } },
+      { icon: '🏛️', label: B('Fire one cortical column', 'הפעלת עמודה אחת'), toggle: true, caption: B('The cortex is built of thin columns (about 0.5 mm wide) running through all six layers. The cells in one column respond to the same thing, for example one whisker of a mouse or one line angle in vision. Watch the column light up layer by layer: IV → II/III → V → VI.', 'הקליפה בנויה מעמודות דקות (ברוחב של כ-0.5 מ"מ) שעוברות דרך כל שש השכבות. התאים בעמודה אחת מגיבים לאותו דבר, למשל לשפם אחד של עכבר או לזווית קו אחת בראייה. צפו בעמודה נדלקת שכבה אחרי שכבה: IV ← II/III ← V ← VI.'), run: (on) => { stopSignal(); showColumn(on); colT = on ? 0 : -1; lastLayer = ''; if (!on) { cells.forEach((c) => glow(c, 0)); light(picked); readout(picked ? info(picked) : ''); } } },
       { icon: '🧫', label: B('Show the real density', 'הצגת הצפיפות האמיתית'), toggle: true, caption: B('Only a few typical cells are drawn so the layers are easy to see. Real cortex is packed: tens of thousands of neurons in every cubic millimetre, their branches woven together. This adds a crowd of cells.', 'רק כמה תאים טיפוסיים מצוירים כדי שהשכבות יהיו ברורות. הקליפה האמיתית צפופה: עשרות אלפי נוירונים בכל מילימטר מעוקב, והענפים שלהם שזורים זה בזה. זה מוסיף המון תאים.'), run: (on) => { crowd.visible = on; stage.needsRender = true; } },
       { icon: '🩸', label: B('Show blood vessels', 'הצגת כלי הדם'), toggle: true, caption: B('Arteries run over the surface and dive straight down, branching into capillaries in every layer: the brain uses about a fifth of the body\'s oxygen.', 'עורקים עוברים על פני השטח וצוללים ישר למטה, ומתפצלים לנימים בכל שכבה: המוח צורך כחמישית מהחמצן של הגוף.'), run: (on) => { vessels.visible = on; stage.needsRender = true; } },
     ],

@@ -127,7 +127,7 @@ export const PATHWAY_CHEM = {
   attention: {
     list: [['norepinephrine', 'active', N('Alerting: after a warning, locus coeruleus neurons release it in the thalamus and the right frontal and parietal cortex, so you are ready to respond.', 'עוררות: אחרי אזהרה, נוירוני הלוקוס צרולאוס משחררים אותו בתלמוס ובקליפה המצחית והקודקודית הימנית, כדי שתהיו מוכנים להגיב.')],
       ['acetylcholine', 'active', N('Orienting: basal forebrain neurons release it in the parietal cortex, helping move your focus to a new place.', 'התמצאות: נוירוני המוח הקדמי הבסיסי משחררים אותו בקליפה הקודקודית, ועוזרים להזיז את המיקוד למקום חדש.')],
-      ['dopamine', 'active', N('Executive control: dopamine from the VTA helps the prefrontal cortex hold the goal and ignore distractions.', 'שליטה ניהולית: דופמין מה-VTA עוזר לקליפה הקדם-מצחית להחזיק את המטרה ולהתעלם מהסחות דעת.')]],
+      ['dopamine', 'active', N('Executive control: dopamine from the VTA reaches the frontal cortex and takes part in planning and other higher functions.', 'שליטה ניהולית: דופמין מה-VTA מגיע לקליפה המצחית ומשתתף בתכנון ובתפקודים גבוהים אחרים.')]],
     steps: [['norepinephrine'], [], ['acetylcholine'], [], ['dopamine']],
   },
 };
@@ -136,9 +136,9 @@ export const PATHWAY_CHEM = {
 export const EFFECT_CHEM = {
   caffeine: [['adenosine', 'blocked', N('It normally builds up while you are awake and makes you sleepy. Caffeine sits on its receptors without switching them on, so the "tired" signal cannot land.', 'בדרך כלל הוא מצטבר בזמן הערות וגורם לישנוניות. קפאין יושב על הקולטנים שלו בלי להפעיל אותם, ולכן אות ה"עייפות" לא נקלט.')]],
   alcohol: [['gaba', 'up', N('Alcohol makes GABA-A receptors respond more strongly: more inhibition, so the brain slows down.', 'אלכוהול גורם לקולטני GABA-A להגיב חזק יותר: יותר עיכוב, ולכן המוח מאט.')],
-    ['glutamate', 'down', N('Alcohol makes NMDA receptors work less, so new memories may not form ("blackouts").', 'אלכוהול מחליש את פעולת קולטני NMDA, ולכן זיכרונות חדשים עלולים לא להיווצר ("בלאקאאוט").')]],
+    ['glutamate', 'down', N('Alcohol makes NMDA receptors work less, which may explain the memory problems it causes.', 'אלכוהול מחליש את פעולת קולטני NMDA, וייתכן שזה מסביר את בעיות הזיכרון שהוא גורם.')]],
   nicotine: [['acetylcholine', 'mimic', N('Nicotine copies it at nicotinic receptors and opens them, as ACh would.', 'ניקוטין מחקה אותו בקולטנים הניקוטיניים ופותח אותם, כמו ש-ACh היה עושה.')],
-    ['dopamine', 'up', N('Nicotine makes VTA neurons release it in the nucleus accumbens (the reward pathway), which drives addiction.', 'ניקוטין גורם לנוירוני ה-VTA לשחרר אותו בגרעין האקומבנס (מסלול התגמול), וזה מניע את ההתמכרות.')]],
+    ['dopamine', 'up', N('Nicotine also stimulates dopamine neurons in the nucleus accumbens (the reward pathway), which drives addiction.', 'ניקוטין מעורר גם נוירוני דופמין בגרעין האקומבנס (מסלול התגמול), וזה מניע את ההתמכרות.')]],
   cocaine: [['dopamine', 'up', N('Cocaine blocks its transporter, so it stays in the synapse and keeps stimulating: the "high", and addiction.', 'קוקאין חוסם את המוביל שלו, ולכן הוא נשאר בסינפסה וממשיך לגרות: ה"היי", וההתמכרות.')],
     ['norepinephrine', 'up', N('Cocaine blocks its transporter too: a racing heart and raised blood pressure.', 'קוקאין חוסם גם את המוביל שלו: לב דוהר ולחץ דם גבוה.')],
     ['serotonin', 'up', N('Cocaine also blocks the serotonin transporter, so serotonin lingers in the synapse as well.', 'קוקאין חוסם גם את מוביל הסרוטונין, ולכן גם סרוטונין נשאר בסינפסה.')]],
@@ -146,7 +146,7 @@ export const EFFECT_CHEM = {
     ['norepinephrine', 'up', N('Released the same way: strong arousal and a racing heart.', 'משתחרר באותה דרך: עוררות חזקה ולב דוהר.')]],
   ssri: [['serotonin', 'up', N('The drug blocks its reuptake, so it stays longer in the synapse; the mood benefit usually takes weeks.', 'התרופה חוסמת את הקליטה החוזרת שלו, ולכן הוא נשאר יותר זמן בסינפסה; השיפור במצב הרוח לוקח בדרך כלל שבועות.')]],
   opioids: [['endorphins', 'mimic', N('Opioids act on the endorphins\' own receptors: strong pain relief and euphoria, but also slowed breathing.', 'אופיואידים פועלים על הקולטנים של האנדורפינים עצמם: שיכוך כאב חזק ואופוריה, אבל גם נשימה מואטת.')]],
-  benzodiazepines: [['gaba', 'up', N('The drug binds its own site on the GABA-A receptor, so GABA opens the Cl⁻ channel more often: calm, less anxiety.', 'התרופה נקשרת לאתר משלה בקולטן GABA-A, ולכן GABA פותח את תעלת ה-Cl⁻ לעיתים קרובות יותר: רוגע, פחות חרדה.')]],
+  benzodiazepines: [['gaba', 'up', N('The drug binds its own site on the GABA-A receptor, so the receptor responds more strongly to GABA: calm, less anxiety.', 'התרופה נקשרת לאתר משלה בקולטן GABA-A, ולכן הקולטן מגיב חזק יותר ל-GABA: רוגע, פחות חרדה.')]],
   ldopa: [['dopamine', 'up', N('The brain turns L-DOPA into dopamine, helping the surviving substantia nigra neurons in Parkinson\'s.', 'המוח הופך L-DOPA לדופמין, ועוזר לנוירונים שנותרו בחומר השחור בפרקינסון.')]],
   antipsychotics: [['dopamine', 'blocked', N('The drug blocks its D2 receptors: this eases psychosis, but in movement pathways it can cause Parkinson-like side effects.', 'התרופה חוסמת את קולטני ה-D2 שלו: זה מקל על הפסיכוזה, אבל במסלולי התנועה עלול לגרום לתופעות לוואי דמויות פרקינסון.')]],
   curare: [['acetylcholine', 'blocked', N('Curare blocks its receptors on the muscles: ACh is released but cannot act, so the muscles are paralysed.', 'קורארה חוסם את הקולטנים שלו בשרירים: ACh משתחרר אבל לא יכול לפעול, ולכן השרירים משותקים.')]],

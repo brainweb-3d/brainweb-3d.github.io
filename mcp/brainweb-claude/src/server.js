@@ -13,14 +13,17 @@ import path from 'node:path';
 import { SCENES } from '../../../content/catalog.js';
 import { regions } from '../../../content/regions.js';
 
-const VERSION = '1.0.1';
+const VERSION = '1.0.2';
 const PORT = +(process.env.BRAINWEB_PORT || 47321);
 // The published site (GitHub Pages) is allowed by default, so visitors don't have to type its address.
+// It has an organization of its own because every page under one github.io name shares the same browser storage:
+// keep brainweb-3d for BrainWeb only. The old address is shared with other sites, so it is never accepted.
 // A page there still has to be paired with a code before it can do anything (see "pairing" below).
-const PUBLIC_SITE = 'https://ortal-libon.github.io';
+const PUBLIC_SITE = 'https://brainweb-3d.github.io';
+const OLD_SITE = 'https://ortal-libon.github.io';
 const ORIGINS = new Set([
   'http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:4173', 'http://127.0.0.1:4173', PUBLIC_SITE,
-  ...String(process.env.BRAINWEB_ORIGIN || '').split(/[,\s]+/).map((s) => s.trim().replace(/\/+$/, '')).filter(Boolean),
+  ...String(process.env.BRAINWEB_ORIGIN || '').split(/[,\s]+/).map((s) => s.trim().replace(/\/+$/, '').toLowerCase()).filter((s) => s && s !== OLD_SITE),
 ]);
 const log = (...a) => console.error('[brainweb]', ...a);
 
@@ -46,11 +49,13 @@ const configDir = process.platform === 'win32'
   : path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'brainweb');
 const tokenFile = path.join(configDir, 'claude-bridge.json');
 function loadToken() {
-  try { const t = JSON.parse(fs.readFileSync(tokenFile, 'utf8')).token; if (typeof t === 'string' && t.length >= 32) return t; } catch { /* create below */ }
+  // "v: 2" = made after the move to the new address. An older token may have been readable by other pages on the old
+  // one, so it is replaced: every browser pairs once more.
+  try { const { token: t, v } = JSON.parse(fs.readFileSync(tokenFile, 'utf8')); if (v === 2 && typeof t === 'string' && t.length >= 32) return t; } catch { /* create below */ }
   const t = crypto.randomBytes(32).toString('base64url');
   try {
     fs.mkdirSync(configDir, { recursive: true });
-    fs.writeFileSync(tokenFile, JSON.stringify({ token: t, note: 'BrainWeb and Claude Desktop pairing secret. Delete this file to unpair every browser.' }, null, 2), { mode: 0o600 });
+    fs.writeFileSync(tokenFile, JSON.stringify({ v: 2, token: t, note: 'BrainWeb and Claude Desktop pairing secret. Delete this file to unpair every browser.' }, null, 2), { mode: 0o600 });
   } catch (e) { log('could not save the pairing token:', e.message); }
   return t;
 }

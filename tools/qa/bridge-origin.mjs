@@ -1,0 +1,34 @@
+// Checks the built Claude extension (run from the project root after a build): which page origins it accepts, that a
+// token from before the move is replaced, and that pairing by code works. Uses a temporary config folder and port.
+import { spawn } from 'node:child_process';
+import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
+import { createRequire } from 'node:module';
+const WebSocket = createRequire(path.resolve('package.json'))('ws');
+const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bw-bridge-'));
+const file = path.join(dir, process.platform === 'win32' ? 'BrainWeb' : 'brainweb', 'claude-bridge.json');
+const OLD = 'x'.repeat(43), PORT = 47991, NEW_SITE = 'https://brainweb-3d.github.io', OLD_SITE = 'https://ortal-libon.github.io';
+fs.mkdirSync(path.dirname(file)); fs.writeFileSync(file, JSON.stringify({ token: OLD }));
+let bad = 0; const ok = (c, m) => { if (!c) bad++; console.log(c ? 'PASS' : 'FAIL', m); };
+const start = async () => { const s = spawn(process.execPath, ['mcp/brainweb-claude/server/index.cjs'], { env: { ...process.env, APPDATA: dir, XDG_CONFIG_HOME: dir, BRAINWEB_PORT: PORT, BRAINWEB_ORIGIN: OLD_SITE + '/ , https://Example.org/' }, stdio: ['pipe', 'pipe', 'pipe'] }); await new Promise((r) => { s.stderr.on('data', (d) => /waiting for BrainWeb/.test(d) && r()); setTimeout(r, 6000); }); return s; };
+const conn = (origin) => new Promise((res) => { const w = new WebSocket(`ws://127.0.0.1:${PORT}`, origin ? { origin } : {}); w.q = []; w.on('message', (m) => w.q.push(JSON.parse(m))); w.on('open', () => res(w)); w.on('error', () => res(null)); });
+const wait = async (w, type) => { for (let i = 0; i < 40; i++) { const m = w.q.find((x) => x.type === type); if (m) return m; await new Promise((r) => setTimeout(r, 50)); } return null; };
+const send = (w, o) => w.send(JSON.stringify(o));
+let s = await start();
+const saved = JSON.parse(fs.readFileSync(file)); ok(saved.v === 2 && saved.token !== OLD && saved.token.length >= 32, 'old token replaced on first start');
+ok(!(await conn(OLD_SITE)), 'old address refused (even when typed as an extra address)');
+ok(!(await conn('https://evil.example')), 'unknown address refused'); ok(!(await conn('https://brainweb-3d.github.io.evil.example')), 'look-alike refused'); ok(!(await conn()), 'no origin refused');
+const ex = await conn('https://example.org'); ok(ex, 'extra address accepted'); ex?.close();
+const w = await conn(NEW_SITE); ok(w, 'new address accepted');
+send(w, { type: 'hello', token: OLD }); ok(await wait(w, 'pair-required'), 'old token not accepted');
+send(w, { type: 'pair-request', code: 'ABC-234' });
+let buf = ''; const replies = []; s.stdout.on('data', (d) => { buf += d; const l = buf.split('\n'); buf = l.pop(); l.filter(Boolean).forEach((x) => replies.push(JSON.parse(x))); });
+const rpc = async (id, method, params) => { s.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n'); for (let i = 0; i < 60; i++) { const r = replies.find((x) => x.id === id); if (r) return r; await new Promise((r) => setTimeout(r, 50)); } };
+const init = await rpc(1, 'initialize', { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 't', version: '1' } }); ok(init?.result.serverInfo.version === '1.0.2', 'version 1.0.2');
+s.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n');
+const wrong = await rpc(2, 'tools/call', { name: 'brainweb_pair', arguments: { code: 'ZZZ-999' } }); ok(wrong?.result.isError, 'wrong code refused');
+const right = await rpc(3, 'tools/call', { name: 'brainweb_pair', arguments: { code: 'abc234' } }); ok(right && !right.result.isError, 'right code pairs');
+ok((await wait(w, 'paired'))?.token === saved.token && await wait(w, 'hello'), 'page receives the new token');
+s.kill(); await new Promise((r) => s.on('exit', r)); s = await start();
+ok(JSON.parse(fs.readFileSync(file)).token === saved.token, 'new token kept on restart');
+const w2 = await conn(NEW_SITE); send(w2, { type: 'hello', token: saved.token }); ok(await wait(w2, 'hello'), 'paired page reconnects without a code');
+s.kill(); fs.rmSync(dir, { recursive: true, force: true }); console.log('failures', bad); process.exit(bad ? 1 : 0);
